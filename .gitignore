@@ -41,3 +41,8 @@ out/
 
 ### macOS ###
 .DS_Store
+
+### Dev environment ###
+.env
+.env.*
+!.env.example
