@@ -4,8 +4,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class RackUpSpringBootApplication
+class TournUpSpringBootApplication
 
 fun main(args: Array<String>) {
-	runApplication<RackUpSpringBootApplication>(*args)
+	runApplication<TournUpSpringBootApplication>(*args)
 }

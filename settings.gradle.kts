@@ -1,1 +1,1 @@
-rootProject.name = "RackUp-SpringBoot"
+rootProject.name = "TournUp-SpringBoot"

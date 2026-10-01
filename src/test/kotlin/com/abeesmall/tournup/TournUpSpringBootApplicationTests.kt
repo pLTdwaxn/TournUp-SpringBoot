@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest
 	properties = ["tournup.auth.provider=stub"],
 )
 @Import(TestcontainersConfiguration::class)
-class RackUpSpringBootApplicationTests {
+class TournUpSpringBootApplicationTests {
 
 	@Test
 	fun contextLoads() {
