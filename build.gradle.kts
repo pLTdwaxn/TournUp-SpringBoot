@@ -16,6 +16,10 @@ java {
 	}
 }
 
+tasks.bootJar {
+    archiveFileName.set("tournup.jar")
+}
+
 repositories {
 	mavenCentral()
 }
