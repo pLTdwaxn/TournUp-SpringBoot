@@ -1,0 +1,127 @@
+name: Build and Publish
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ${{ vars.VULTR_CR_REGISTRY }}/tournup
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Set up Docker Buildx
+        if: >
+          github.event_name == 'push' &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/'))
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image and archive
+        if: >
+          github.event_name == 'push' &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/'))
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          tags: tournup:build
+          outputs: type=docker,dest=/tmp/tournup.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Store image archive
+        if: >
+          github.event_name == 'push' &&
+          (github.ref == 'refs/heads/master' ||
+          startsWith(github.ref, 'refs/tags/'))
+        uses: actions/upload-artifact@v7
+        with:
+          name: tournup-image
+          path: /tmp/tournup.tar
+          compression-level: 0
+          retention-days: 30
+
+  publish-master:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download image
+        uses: actions/download-artifact@v7
+        with:
+          name: tournup-image
+          path: /tmp
+
+      - name: Load image
+        run: docker load --input /tmp/tournup.tar
+
+      - name: Log in to Vultr CR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ vars.VULTR_CR_REGISTRY }}
+          username: ${{ secrets.VULTR_CR_USERNAME }}
+          password: ${{ secrets.VULTR_CR_API_KEY }}
+
+      - name: Publish preview image
+        run: |
+          docker tag tournup:build "$IMAGE:preview"
+          docker tag tournup:build "$IMAGE:sha-$GITHUB_SHA"
+          docker push "$IMAGE:preview"
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+
+  publish-tag:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production-publish
+
+    steps:
+      - name: Download image
+        uses: actions/download-artifact@v7
+        with:
+          name: tournup-image
+          path: /tmp
+
+      - name: Load image
+        run: docker load --input /tmp/tournup.tar
+
+      - name: Log in to Vultr CR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ vars.VULTR_CR_REGISTRY }}
+          username: ${{ secrets.VULTR_CR_USERNAME }}
+          password: ${{ secrets.VULTR_CR_API_KEY }}
+
+      - name: Publish tagged image
+        run: |
+          docker tag tournup:build "$IMAGE:$GITHUB_REF_NAME"
+          docker tag tournup:build "$IMAGE:sha-$GITHUB_SHA"
+          docker push "$IMAGE:$GITHUB_REF_NAME"
+          docker push "$IMAGE:sha-$GITHUB_SHA"

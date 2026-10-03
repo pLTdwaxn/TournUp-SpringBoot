@@ -16,7 +16,7 @@ services:
       start_period: 10s
 
   tournup:
-    image: tournup:preview
+    image: ${TOURNUP_IMAGE:-tournup:preview}
     build:
       context: .
     restart: unless-stopped
