@@ -5,10 +5,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
-import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
-import java.time.Instant
 import java.util.UUID
+import org.hibernate.envers.Audited
 
 enum class HandicapMode {
     NO_HANDICAP,
@@ -28,6 +27,7 @@ enum class ParticipantType {
 
 @Entity
 @Table(name = "tournaments")
+@Audited
 class Tournament(
     @Id
     val id: UUID = UUID.randomUUID(),
@@ -52,15 +52,4 @@ class Tournament(
     @Enumerated(EnumType.STRING)
     @Column(name = "participant_type", nullable = false, length = 20)
     var participantType: ParticipantType = ParticipantType.PLAYER,
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    val createdAt: Instant = Instant.now(),
-
-    @Column(name = "updated_at", nullable = false)
-    var updatedAt: Instant = Instant.now(),
-) {
-    @PreUpdate
-    fun markUpdated() {
-        updatedAt = Instant.now()
-    }
-}
+)

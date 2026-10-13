@@ -7,8 +7,6 @@ create table tournaments
     handicap_mode      varchar(20)     not null default 'NO_HANDICAP',
     participation_mode varchar(20)     not null default 'WALK_IN',
     participant_type   varchar(20)     not null default 'PLAYER',
-    created_at         timestamptz     not null default current_timestamp,
-    updated_at         timestamptz     not null default current_timestamp,
 
     constraint tournaments_slug_unique unique (slug),
     constraint tournaments_handicap_mode_check

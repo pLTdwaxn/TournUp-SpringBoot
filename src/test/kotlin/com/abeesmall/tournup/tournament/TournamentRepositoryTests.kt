@@ -7,11 +7,9 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
 import jakarta.persistence.EntityManager
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
-import kotlin.test.assertTrue
 
 @DataJpaTest
 @AutoConfigureTestDatabase(
@@ -47,13 +45,11 @@ class TournamentRepositoryTests {
     }
 
     @Test
-    fun `updates timestamp when a managed tournament changes`() {
-        val originalUpdatedAt = Instant.parse("2000-01-01T00:00:00Z")
+    fun `updates a managed tournament`() {
         val tournament = repository.saveAndFlush(
             Tournament(
                 slug = "winter-championship",
                 name = "Winter Championship",
-                updatedAt = originalUpdatedAt,
             ),
         )
 
@@ -64,6 +60,5 @@ class TournamentRepositoryTests {
         val found = assertNotNull(repository.findById(tournament.id).orElse(null))
 
         assertEquals("Winter Open", found.name)
-        assertTrue(found.updatedAt.isAfter(originalUpdatedAt))
     }
 }
