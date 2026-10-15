@@ -1,0 +1,18 @@
+$kind: http-request
+method: GET
+url: "{{baseUrl}}/api/auth/config/"
+scripts:
+  - type: afterResponse
+    code: |
+      
+      pm.test("HTTP status is 200", function () {
+        pm.response.to.have.status(200);
+      });
+      pm.test("Stub authentication is enabled", function () {
+        pm.expect(pm.response.json().provider).to.eql("stub");
+      });
+      pm.test("Player access is available", function () {
+        const levels = pm.response.json().accessLevels;
+        pm.expect(levels.map(level => level.id)).to.include("PLAYER");
+      });
+    language: text/javascript

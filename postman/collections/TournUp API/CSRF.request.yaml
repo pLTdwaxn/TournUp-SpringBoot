@@ -1,0 +1,20 @@
+$kind: http-request
+method: GET
+url: "{{baseUrl}}/api/auth/csrf/"
+scripts:
+  - type: afterResponse
+    code: |
+      const sessionCookie = pm.response.headers.get("Set-Cookie");
+      pm.variables.set("sessionCookie", sessionCookie.split(";")[0]);
+
+      pm.test("HTTP status is 200", function () {
+        pm.response.to.have.status(200);
+      });
+      const csrf = pm.response.json();
+      pm.test("CSRF token and header are present", function () {
+        pm.expect(csrf.token).to.be.a("string").and.not.empty;
+        pm.expect(csrf.headerName).to.be.a("string").and.not.empty;
+      });
+      pm.variables.set("csrfToken", csrf.token);
+      pm.variables.set("csrfHeaderName", csrf.headerName);
+    language: text/javascript
