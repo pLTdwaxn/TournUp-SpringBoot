@@ -2,17 +2,17 @@ $kind: http-request
 id: f542a3f0fb77581c77192d3c
 name: Login
 method: POST
-url: '{{baseUrl}}/api/auth/login/'
+url: "{{baseUrl}}/api/auth/login/"
 body:
   type: json
-  content: '{"credentials":{"accessLevel":"PLAYER"}}'
+  content: '{"credentials":{"accessLevel":"{{accessLevel}}","tenantSlug":"{{tenantSlug}}"}}'
 headers:
   - key: Content-Type
     value: application/json
   - key: X-CSRF-TOKEN
-    value: '{{csrfToken}}'
+    value: "{{csrfToken}}"
   - key: Cookie
-    value: '{{sessionCookie}}'
+    value: "{{sessionCookie}}"
 scripts:
   - type: afterResponse
     code: |-
@@ -21,8 +21,15 @@ scripts:
         pm.response.to.have.status(200);
       });
       const user = pm.response.json();
-      pm.test("Logged in as a player", function () {
-        pm.expect(user.authorities).to.include("ROLE_PLAYER");
+      pm.test("Logged in to the selected tenant", function () {
+        pm.expect(user.tenantSlug)
+          .to.eql(pm.iterationData.get("tenantSlug"));
+        pm.expect(user.tenantId)
+          .to.eql(pm.iterationData.get("expectedTenantId"));
+      });
+      pm.test("Logged in with the selected authority", function () {
+        pm.expect(user.authorities)
+          .to.include(pm.iterationData.get("expectedAuthority"));
       });
       pm.variables.set("loggedInUserId", user.userId);
       const cookie = pm.response.headers.get("Set-Cookie");

@@ -1,5 +1,7 @@
 package com.abeesmall.tournup.auth
 
+import com.abeesmall.tournup.catalog.TenantCatalog
+
 import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -8,6 +10,10 @@ enum class StubAccessLevel(
     val label: String,
     val authorities: Set<String>,
 ) {
+    SUPER_ADMIN(
+        label = "Super Admin",
+        authorities = setOf("ROLE_SUPER_ADMIN"),
+    ),
     PLAYER(
         label = "Player",
         authorities = setOf("ROLE_PLAYER"),
@@ -33,7 +39,9 @@ enum class StubAccessLevel(
     havingValue = "stub",
 )
 
-class StubAuthAdapter : AuthAdapter {
+class StubAuthAdapter(
+    private val catalog: TenantCatalog,
+) : AuthAdapter {
 
     override fun configuration(): AuthConfiguration =
         AuthConfiguration(
@@ -58,15 +66,23 @@ class StubAuthAdapter : AuthAdapter {
             "Unsupported accessLevel: $requestedLevel",
         )
 
+        val tenantSlug = request.credentials["tenantSlug"]
+            ?: throw InvalidAuthRequestException(
+                "tenantSlug is required",
+            )
+
+        val tenant = catalog.findActiveTenantBySlug(tenantSlug)
+            ?: throw InvalidAuthRequestException(
+                "Unknown or inactive tenant: $tenantSlug",
+            )
+
         return AuthenticatedUser(
             userId = UUID.fromString(
                 "00000000-0000-0000-0000-000000000001",
             ),
             displayName = accessLevel.label,
-            tenantId = UUID.fromString(
-                "00000000-0000-0000-0000-000000000002",
-            ),
-            tenantSlug = "demo",
+            tenantId = tenant.id,
+            tenantSlug = tenant.slug,
             authorities = accessLevel.authorities,
         )
     }

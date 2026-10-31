@@ -1,9 +1,14 @@
 package com.abeesmall.tournup.auth
 
+import com.abeesmall.tournup.catalog.CatalogTenant
+import com.abeesmall.tournup.catalog.TenantCatalog
 import com.abeesmall.tournup.security.SecurityConfiguration
+
+import org.mockito.Mockito.`when` as whenever
 import org.hamcrest.Matchers.emptyString
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.not
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -12,10 +17,12 @@ import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
+import java.util.UUID
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -30,6 +37,20 @@ import kotlin.test.assertTrue
 class AuthControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {
+    @MockitoBean
+    private lateinit var catalog: TenantCatalog
+
+    @BeforeEach
+    fun registerKnownTenant() {
+        val tenant = CatalogTenant(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000002"),
+            slug = "demo-club-1",
+            name = "Demo Club 1",
+        )
+
+        whenever(catalog.findActiveTenantBySlug(tenant.slug))
+            .thenReturn(tenant)
+    }
 
     @Test
     fun `auth configuration is publicly available`() {
@@ -38,9 +59,9 @@ class AuthControllerTests(
                 status { isOk() }
                 content { contentType("application/json") }
                 jsonPath("$.provider", equalTo("stub"))
-                jsonPath("$.accessLevels.length()", equalTo(4))
-                jsonPath("$.accessLevels[0].id", equalTo("PLAYER"))
-                jsonPath("$.accessLevels[0].label", equalTo("Player"))
+                jsonPath("$.accessLevels.length()", equalTo(5))
+                jsonPath("$.accessLevels[0].id", equalTo("SUPER_ADMIN"))
+                jsonPath("$.accessLevels[0].label", equalTo("Super Admin"))
             }
     }
 
@@ -52,14 +73,15 @@ class AuthControllerTests(
             content = """
                 {
                     "credentials": {
-                        "accessLevel": "TOURNAMENT_MANAGER"
+                        "accessLevel": "TOURNAMENT_MANAGER",
+                        "tenantSlug": "demo-club-1"
                     }
                 }
             """.trimIndent()
         }
             .andExpect {
                 status { isOk() }
-                jsonPath("$.tenantSlug", equalTo("demo"))
+                jsonPath("$.tenantSlug", equalTo("demo-club-1"))
                 jsonPath(
                     "$.authorities[0]",
                     equalTo("ROLE_TOURNAMENT_MANAGER"),
@@ -84,7 +106,7 @@ class AuthControllerTests(
             .andExpect {
                 status { isOk() }
                 jsonPath("$.displayName", equalTo("Tournament Manager"))
-                jsonPath("$.tenantSlug", equalTo("demo"))
+                jsonPath("$.tenantSlug", equalTo("demo-club-1"))
                 jsonPath(
                     "$.authorities[0]",
                     equalTo("ROLE_TOURNAMENT_MANAGER"),
@@ -118,6 +140,51 @@ class AuthControllerTests(
                 jsonPath(
                     "$.token",
                     not(emptyString()),
+                )
+            }
+    }
+
+    @Test
+    fun `missing access level returns bad request`() {
+        mockMvc.post("/api/auth/login/") {
+            with(csrf())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"credentials":{"tenantSlug":"demo-club-1"}}"""
+        }
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.status", equalTo(400))
+                jsonPath("$.detail", equalTo("accessLevel is required"))
+            }
+    }
+
+    @Test
+    fun `missing tenant returns bad request`() {
+        mockMvc.post("/api/auth/login/") {
+            with(csrf())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"credentials":{"accessLevel":"PLAYER"}}"""
+        }
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.status", equalTo(400))
+                jsonPath("$.detail", equalTo("tenantSlug is required"))
+            }
+    }
+
+    @Test
+    fun `unknown tenant returns bad request`() {
+        mockMvc.post("/api/auth/login/") {
+            with(csrf())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"credentials":{"accessLevel":"PLAYER","tenantSlug":"missing"}}"""
+        }
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.status", equalTo(400))
+                jsonPath(
+                    "$.detail",
+                    equalTo("Unknown or inactive tenant: missing"),
                 )
             }
     }

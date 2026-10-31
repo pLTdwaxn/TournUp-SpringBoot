@@ -1,0 +1,32 @@
+[
+  {
+    "tenantSlug": "abeesmall",
+    "accessLevel": "SUPER_ADMIN",
+    "expectedAuthority": "ROLE_SUPER_ADMIN",
+    "expectedTenantId": "00000000-0000-0000-0000-000000000001",
+    "expectedDatabase": "abeesmall_tournup",
+    "expectedDbUser": "george",
+    "expectedTournamentId": null,
+    "expectedTournamentName": null
+  },
+  {
+    "tenantSlug": "demo-club-1",
+    "accessLevel": "PLAYER",
+    "expectedAuthority": "ROLE_PLAYER",
+    "expectedTenantId": "00000000-0000-0000-0000-000000000002",
+    "expectedDatabase": "demo_club_1_tournup",
+    "expectedDbUser": "demo_club_1_app",
+    "expectedTournamentId": "00000000-0000-0000-0000-000000000100",
+    "expectedTournamentName": "Demo tenant tournament"
+  },
+  {
+    "tenantSlug": "demo-club-2",
+    "accessLevel": "PLAYER",
+    "expectedAuthority": "ROLE_PLAYER",
+    "expectedTenantId": "00000000-0000-0000-0000-000000000003",
+    "expectedDatabase": "demo_club_2_tournup",
+    "expectedDbUser": "demo_club_2_app",
+    "expectedTournamentId": "00000000-0000-0000-0000-000000000100",
+    "expectedTournamentName": "Second tenant tournament"
+  }
+]

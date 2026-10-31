@@ -4,8 +4,24 @@ url: "{{baseUrl}}/api/auth/csrf/"
 scripts:
   - type: afterResponse
     code: |
-      const sessionCookie = pm.response.headers.get("Set-Cookie");
-      pm.variables.set("sessionCookie", sessionCookie.split(";")[0]);
+      const responseCookie = pm.response.headers.all()
+        .filter(h => h.key.toLowerCase() === "set-cookie")
+        .map(h => h.value.split(";")[0])
+        .find(cookie => cookie.startsWith("JSESSIONID="));
+
+      const existingSessionId = pm.cookies.get("JSESSIONID");
+      const sessionCookie = responseCookie ||
+        (existingSessionId ? `JSESSIONID=${existingSessionId}` : null);
+
+      pm.test("Session cookie is available", function () {
+        pm.expect(sessionCookie).to.be.a("string").and.not.empty;
+      });
+
+      if (sessionCookie) {
+        pm.variables.set("sessionCookie", sessionCookie);
+      } else {
+        pm.variables.unset("sessionCookie");
+      }
 
       pm.test("HTTP status is 200", function () {
         pm.response.to.have.status(200);

@@ -2,10 +2,10 @@ $kind: http-request
 id: 0fe727bdeb648cafd4d5e563
 name: Me
 method: GET
-url: '{{baseUrl}}/api/auth/me/'
+url: "{{baseUrl}}/api/auth/me/"
 headers:
   - key: Cookie
-    value: '{{sessionCookie}}'
+    value: "{{sessionCookie}}"
 scripts:
   - type: afterResponse
     code: |-
@@ -13,10 +13,19 @@ scripts:
       pm.test("HTTP status is 200", function () {
         pm.response.to.have.status(200);
       });
+      const user = pm.response.json();
       pm.test("Session belongs to the logged-in user", function () {
-        pm.expect(pm.response.json().userId).to.eql(pm.variables.get("loggedInUserId"));
+        pm.expect(user.userId)
+          .to.eql(pm.variables.get("loggedInUserId"));
       });
-      pm.test("Session has the player role", function () {
-        pm.expect(pm.response.json().authorities).to.include("ROLE_PLAYER");
+      pm.test("Session belongs to the selected tenant", function () {
+        pm.expect(user.tenantSlug)
+          .to.eql(pm.iterationData.get("tenantSlug"));
+        pm.expect(user.tenantId)
+          .to.eql(pm.iterationData.get("expectedTenantId"));
+      });
+      pm.test("Session has the selected authority", function () {
+        pm.expect(user.authorities)
+          .to.include(pm.iterationData.get("expectedAuthority"));
       });
     language: text/javascript
