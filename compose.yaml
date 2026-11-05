@@ -3,11 +3,13 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-tournup_preview}
-      POSTGRES_USER: ${DB_USER:-tournup}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?Set POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
     volumes:
       - postgresql_data:/var/lib/postgresql
+    secrets:
+      - postgres_admin_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -23,19 +25,46 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+      openbao-agent:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: preview
       DB_HOST: postgresql
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-tournup_preview}
-      DB_USER: ${DB_USER:-tournup}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      DB_NAME: ${DB_NAME:?Set DB_NAME}
+      DB_USER: ${DB_USER:?Set DB_USER}
+      DB_CREDENTIAL_REFERENCE: ${DB_CREDENTIAL_REFERENCE:?Set DB_CREDENTIAL_REFERENCE}
+      CATALOG_DB_HOST: postgresql
+      CATALOG_DB_PORT: 5432
+      CATALOG_DB_NAME: ${CATALOG_DB_NAME:?Set CATALOG_DB_NAME}
+      CATALOG_DB_USER: ${CATALOG_DB_USER:?Set CATALOG_DB_USER}
+      CATALOG_DB_CREDENTIAL_REFERENCE: openbao:kv/tournup-api/catalog/database
+      OPENBAO_ADDR: https://openbao-preview:8200
       TOURNUP_AUTH_PROVIDER: stub
       SERVER_SERVLET_SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0
     ports:
       - "127.0.0.1:${TOURNUP_PORT:-8080}:8080"
+    group_add:
+      - "${TOURNUP_OPENBAO_GID:-1001}"
+    volumes:
+      - type: volume
+        source: openbao_token
+        target: /run/openbao/token
+        read_only: true
+      - type: bind
+        source: ${TOURNUP_OPENBAO_RUNTIME_DIR:?Set TOURNUP_OPENBAO_RUNTIME_DIR}/trust/ca.crt
+        target: /run/openbao/trust/ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - default
+      - openbao_secrets
 
 volumes:
   postgresql_data:
-      
+
+secrets:
+  postgres_admin_password:
+    file: ${TOURNUP_POSTGRES_ADMIN_PASSWORD_FILE:?Set TOURNUP_POSTGRES_ADMIN_PASSWORD_FILE}

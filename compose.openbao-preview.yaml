@@ -17,6 +17,15 @@ services:
     memswap_limit: 128m
     environment:
       SKIP_CHOWN: "true"
+      BAO_ADDR: https://openbao-preview:8200
+      BAO_CACERT: /run/openbao/trust/ca.crt
+      BAO_TOKEN_PATH: /run/openbao/token/token
+    healthcheck:
+      test: ["CMD", "bao", "token", "lookup", "-field=ttl"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - type: bind
         source: ./deploy/openbao-agent-preview.hcl
