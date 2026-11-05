@@ -1,22 +1,29 @@
-package com.abeesmall.tournup.tenancy
+package com.abeesmall.tournup.credentials
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 
-interface TenantCredentialResolver {
+interface DatabaseCredentialResolver {
     fun resolvePassword(reference: String): String
 }
 
 @Component
-class EnvironmentTenantCredentialResolver(
+@ConditionalOnProperty(
+    prefix = "tournup.credentials",
+    name = ["provider"],
+    havingValue = "env",
+    matchIfMissing = true,
+)
+class EnvironmentDatabaseCredentialResolver(
     private val environment: Environment,
-) : TenantCredentialResolver {
+) : DatabaseCredentialResolver {
 
     private val keyPattern = Regex("[A-Z_][A-Z0-9_]*")
 
     override fun resolvePassword(reference: String): String {
         require(reference.startsWith("env:")) {
-            "Unsupported tenant credential reference"
+            "Unsupported database credential reference"
         }
 
         val key = reference.removePrefix("env:")

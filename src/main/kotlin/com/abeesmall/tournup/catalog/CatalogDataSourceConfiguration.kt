@@ -1,7 +1,10 @@
 package com.abeesmall.tournup.catalog
 
+import com.abeesmall.tournup.credentials.DatabaseCredentialResolver
+
 import com.zaxxer.hikari.HikariDataSource
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties
@@ -17,15 +20,20 @@ class CatalogDataSourceConfiguration {
 
     @Bean(defaultCandidate = false)
     @ConfigurationProperties("tournup.catalog.datasource")
-    fun catalogDataSourceProperties(): DataSourceProperties = DataSourceProperties()
+    fun catalogDataSourceProperties(): DataSourceProperties =
+        DataSourceProperties()
 
     @Bean(defaultCandidate = false, destroyMethod = "close")
     fun catalogDataSource(
         @Qualifier("catalogDataSourceProperties")
         properties: DataSourceProperties,
+        @Value("\${tournup.catalog.datasource.credential-reference}")
+        credentialReference: String,
+        credentialResolver: DatabaseCredentialResolver,
     ): HikariDataSource =
         properties.initializeDataSourceBuilder()
             .type(HikariDataSource::class.java)
+            .password(credentialResolver.resolvePassword(credentialReference))
             .build()
             .apply {
                 poolName = "catalog-reader"

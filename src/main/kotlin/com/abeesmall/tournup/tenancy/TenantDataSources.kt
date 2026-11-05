@@ -1,6 +1,7 @@
 package com.abeesmall.tournup.tenancy
 
 import com.abeesmall.tournup.catalog.TenantDatabaseBinding
+import com.abeesmall.tournup.credentials.DatabaseCredentialResolver
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import jakarta.annotation.PreDestroy
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class TenantDataSource(
     private val registry: TenantRegistry,
-    private val credentialResolver: TenantCredentialResolver,
+    private val credentialResolver: DatabaseCredentialResolver,
 ) {
     private class TenantPool(
         val binding: TenantDatabaseBinding,

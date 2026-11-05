@@ -1,5 +1,7 @@
 package com.abeesmall.tournup.catalog
 
+import com.abeesmall.tournup.credentials.EnvironmentDatabaseCredentialResolver
+
 import java.util.UUID
 import java.util.function.Supplier
 import javax.sql.DataSource
@@ -200,6 +202,7 @@ class JdbcTenantCatalogTests {
                 ),
             )
             .withUserConfiguration(
+                EnvironmentDatabaseCredentialResolver::class.java,
                 CatalogDataSourceConfiguration::class.java,
                 CatalogMigrationConfiguration::class.java,
                 JdbcTenantCatalog::class.java,
@@ -212,7 +215,8 @@ class JdbcTenantCatalogTests {
             .withPropertyValues(
                 "tournup.catalog.datasource.url=${postgres.jdbcUrl}",
                 "tournup.catalog.datasource.username=catalog_test_reader",
-                "tournup.catalog.datasource.password=catalog_test_reader_password",
+                "tournup.catalog.datasource.credential-reference=env:CATALOG_DB_PASSWORD",
+                "CATALOG_DB_PASSWORD=catalog_test_reader_password",
                 "tournup.catalog.migration.username=${postgres.username}",
                 "tournup.catalog.migration.password=${postgres.password}",
             )
