@@ -1,0 +1,58 @@
+name: tournup-preview
+
+services:
+  openbao-agent:
+    image: ghcr.io/openbao/openbao:2.7.1
+    command:
+      - bao
+      - agent
+      - -config=/run/openbao/config/agent.hcl
+    restart: unless-stopped
+    user: "100:${TOURNUP_OPENBAO_GID:-1001}"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    memswap_limit: 128m
+    environment:
+      SKIP_CHOWN: "true"
+    volumes:
+      - type: bind
+        source: ./deploy/openbao-agent-preview.hcl
+        target: /run/openbao/config/agent.hcl
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TOURNUP_OPENBAO_RUNTIME_DIR:?Set TOURNUP_OPENBAO_RUNTIME_DIR}/bootstrap
+        target: /run/openbao/bootstrap
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TOURNUP_OPENBAO_RUNTIME_DIR:?Set TOURNUP_OPENBAO_RUNTIME_DIR}/trust/ca.crt
+        target: /run/openbao/trust/ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: volume
+        source: openbao_token
+        target: /run/openbao/token
+    networks:
+      - openbao_secrets
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  openbao_token:
+    external: true
+    name: tournup-preview-openbao-token
+
+networks:
+  openbao_secrets:
+    external: true
+    name: openbao-preview-secrets
