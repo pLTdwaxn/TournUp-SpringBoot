@@ -5,18 +5,16 @@ import java.util.UUID
 import javax.sql.DataSource
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.context.annotation.DependsOn
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 
 @Repository
-@DependsOn("catalogFlyway")
 @ConditionalOnProperty(
     prefix = "tournup.catalog.datasource",
     name = ["url"],
 )
 class JdbcTenantCatalog(
-    @param:Qualifier("catalogDataSource")
+    @Qualifier("catalogDataSource")
     dataSource: DataSource,
 ) : TenantCatalog {
 

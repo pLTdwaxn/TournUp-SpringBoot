@@ -3,8 +3,10 @@ package com.abeesmall.tournup.catalog
 import com.abeesmall.tournup.credentials.DatabaseCredentialResolver
 
 import com.zaxxer.hikari.HikariDataSource
+import org.flywaydb.core.Flyway
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties
@@ -30,8 +32,13 @@ class CatalogDataSourceConfiguration {
         @Value("\${tournup.catalog.datasource.credential-reference}")
         credentialReference: String,
         credentialResolver: DatabaseCredentialResolver,
-    ): HikariDataSource =
-        properties.initializeDataSourceBuilder()
+        @Qualifier("catalogFlyway")
+        catalogMigration: ObjectProvider<Flyway>,
+    ): HikariDataSource {
+        // Run enabled migrations before making the reader available.
+        catalogMigration.getIfAvailable()
+
+        return properties.initializeDataSourceBuilder()
             .type(HikariDataSource::class.java)
             .password(credentialResolver.resolvePassword(credentialReference))
             .build()
@@ -41,4 +48,5 @@ class CatalogDataSourceConfiguration {
                 minimumIdle = 0
                 isReadOnly = true
             }
+    }
 }

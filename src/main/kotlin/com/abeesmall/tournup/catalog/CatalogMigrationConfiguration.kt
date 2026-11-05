@@ -16,6 +16,11 @@ import org.springframework.core.env.Environment
 class CatalogMigrationConfiguration {
 
     @Bean(defaultCandidate = false, initMethod = "migrate")
+    @ConditionalOnProperty(
+        prefix = "tournup.catalog.migration",
+        name = ["enabled"],
+        havingValue = "true",
+    )
     fun catalogFlyway(
         @Qualifier("catalogDataSourceProperties")
         properties: DataSourceProperties,

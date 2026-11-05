@@ -5,6 +5,7 @@ import com.abeesmall.tournup.credentials.EnvironmentDatabaseCredentialResolver
 import java.util.UUID
 import java.util.function.Supplier
 import javax.sql.DataSource
+import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -17,6 +18,7 @@ import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -192,6 +194,45 @@ class JdbcTenantCatalogTests {
         }
     }
 
+    @Test
+    fun `reads an existing catalog without migration credentials`() {
+        // Provision the schema separately from the application context.
+        Flyway.configure()
+            .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
+            .locations("classpath:db/catalog")
+            .load()
+            .migrate()
+
+        ApplicationContextRunner()
+            .withConfiguration(
+                AutoConfigurations.of(
+                    ConfigurationPropertiesAutoConfiguration::class.java,
+                ),
+            )
+            .withUserConfiguration(
+                EnvironmentDatabaseCredentialResolver::class.java,
+                CatalogDataSourceConfiguration::class.java,
+                CatalogMigrationConfiguration::class.java,
+                JdbcTenantCatalog::class.java,
+            )
+            .withPropertyValues(
+                "tournup.catalog.datasource.url=${postgres.jdbcUrl}",
+                "tournup.catalog.datasource.username=catalog_test_reader",
+                "tournup.catalog.datasource.credential-reference=env:CATALOG_DB_PASSWORD",
+                "CATALOG_DB_PASSWORD=catalog_test_reader_password",
+                "tournup.catalog.migration.enabled=false",
+            )
+            .run { context ->
+                assertNull(context.startupFailure)
+                assertFalse(context.containsBean("catalogFlyway"))
+
+                seedCatalog()
+
+                val catalog = context.getBean(TenantCatalog::class.java)
+                assertEquals(tenant, catalog.findActiveTenantById(tenant.id))
+            }
+    }
+
     private fun withCatalog(
         assertions: (TenantCatalog, DataSource) -> Unit,
     ) {
@@ -217,6 +258,7 @@ class JdbcTenantCatalogTests {
                 "tournup.catalog.datasource.username=catalog_test_reader",
                 "tournup.catalog.datasource.credential-reference=env:CATALOG_DB_PASSWORD",
                 "CATALOG_DB_PASSWORD=catalog_test_reader_password",
+                "tournup.catalog.migration.enabled=true",
                 "tournup.catalog.migration.username=${postgres.username}",
                 "tournup.catalog.migration.password=${postgres.password}",
             )
