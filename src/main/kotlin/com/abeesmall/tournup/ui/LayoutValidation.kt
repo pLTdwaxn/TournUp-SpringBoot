@@ -1,11 +1,19 @@
 package com.abeesmall.tournup.ui
 
+private fun layoutFieldIds(definition: LayoutDefinition): List<String> =
+    when (definition.layout.type) {
+        UiLayoutType.FORM ->
+            definition.layout.sections.flatMap { it.fields }
+
+        UiLayoutType.TABLE ->
+            definition.layout.columns
+    }
+
 fun unknownLayoutFieldIds(
     definition: LayoutDefinition,
     availableFieldIds: Set<String>,
 ): Set<String> {
-    val placedFieldIds = definition.layout.sections
-        .flatMap { it.fields }
+    val placedFieldIds = layoutFieldIds(definition)
         .toSet()
 
     return (placedFieldIds + definition.fields.keys) - availableFieldIds
@@ -17,10 +25,22 @@ fun incompatibleWidgetFieldIds(
 ): Set<String> =
     definition.fields
         .filter { (fieldId, presentation) ->
-            when (fieldTypes[fieldId]) {
-                UiDataType.STRING -> presentation.widget == UiWidget.SELECT
-                UiDataType.ENUM -> presentation.widget != UiWidget.SELECT
-                null -> false
+            val dataType = fieldTypes[fieldId] ?: return@filter false
+
+            when (definition.layout.type) {
+                UiLayoutType.FORM -> when (dataType) {
+                    UiDataType.STRING ->
+                        presentation.widget !in setOf(
+                            UiWidget.TEXT,
+                            UiWidget.TEXTAREA,
+                        )
+
+                    UiDataType.ENUM ->
+                        presentation.widget != UiWidget.SELECT
+                }
+
+                UiLayoutType.TABLE ->
+                    presentation.widget != UiWidget.DISPLAY
             }
         }
         .keys
@@ -29,8 +49,11 @@ fun omittedRequiredFieldIds(
     definition: LayoutDefinition,
     requiredWithoutDefaults: Set<String>,
 ): Set<String> {
-    val placedFieldIds = definition.layout.sections
-        .flatMap { it.fields }
+    if (definition.layout.type == UiLayoutType.TABLE) {
+        return emptySet()
+    }
+
+    val placedFieldIds = layoutFieldIds(definition)
         .toSet()
 
     return requiredWithoutDefaults - placedFieldIds
@@ -39,16 +62,14 @@ fun omittedRequiredFieldIds(
 fun missingPresentationFieldIds(
     definition: LayoutDefinition
 ): Set<String> {
-    val placedFieldIds = definition.layout.sections
-        .flatMap { it.fields }
+    val placedFieldIds = layoutFieldIds(definition)
         .toSet()
 
     return placedFieldIds - definition.fields.keys
 }
 
 fun duplicatePlacedFieldIds(definition: LayoutDefinition): Set<String> =
-    definition.layout.sections
-        .flatMap { it.fields }
+    layoutFieldIds(definition)
         .groupingBy { it }
         .eachCount()
         .filterValues { it > 1 }

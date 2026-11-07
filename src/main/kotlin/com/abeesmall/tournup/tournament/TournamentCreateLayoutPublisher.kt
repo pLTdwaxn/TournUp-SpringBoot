@@ -4,6 +4,7 @@ import com.abeesmall.tournup.ui.LayoutValidationReport
 import com.abeesmall.tournup.ui.UiLayoutRepository
 import com.abeesmall.tournup.ui.UiLayoutRevisionId
 import com.abeesmall.tournup.ui.UiLayoutRevisionRepository
+import com.abeesmall.tournup.ui.UiLayoutType
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.validateLayoutDefinition
 import org.springframework.stereotype.Service
@@ -24,15 +25,22 @@ class TournamentCreateLayoutPublisher(
         val layout = layouts.findById(layoutId).orElseThrow {
             IllegalArgumentException("Unknown layout: $layoutId")
         }
-        require(layout.resource == "tournament" &&
-            layout.operation == UiOperation.CREATE.wireValue) {
-                "Not a tournament creation layout"
-            }
+
+        require(
+            layout.resource == "tournament" &&
+                    layout.operation == UiOperation.CREATE.wireValue
+        ) {
+            "Not a tournament creation layout"
+        }
 
         val revision = revisions.findById(
             UiLayoutRevisionId(layoutId, revisionNumber),
         ).orElseThrow {
             IllegalArgumentException("Unknown layout revision: $revisionNumber")
+        }
+
+        require(revision.definition.layout.type == UiLayoutType.FORM) {
+            "Tournament creation requires a form layout"
         }
 
         val catalogue = tournamentCreateFieldCatalogue()

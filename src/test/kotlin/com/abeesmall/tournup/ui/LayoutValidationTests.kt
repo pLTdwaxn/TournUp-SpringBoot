@@ -49,9 +49,9 @@ class LayoutValidationTests {
                 ),
             ),
             fields = mapOf(
-                    "name" to FieldPresentation("Name", UiWidget.SELECT),
-                    "participantType" to FieldPresentation("Participant type", UiWidget.TEXT),
-                    "description" to FieldPresentation("Description", UiWidget.TEXTAREA),
+                "name" to FieldPresentation("Name", UiWidget.SELECT),
+                "participantType" to FieldPresentation("Participant type", UiWidget.TEXT),
+                "description" to FieldPresentation("Description", UiWidget.TEXTAREA),
             ),
         )
 
@@ -178,5 +178,70 @@ class LayoutValidationTests {
             report,
         )
         assertEquals(false, report.isValid)
+    }
+
+    @Test
+    fun `reports table errors without requiring creation fields`() {
+        val definition = LayoutDefinition(
+            title = "Tournaments",
+            layout = UiLayout(
+                type = UiLayoutType.TABLE,
+                columns = listOf(
+                    "name", "name", "participantType", "ghost",
+                ),
+            ),
+            fields = mapOf(
+                "name" to FieldPresentation("Name", UiWidget.DISPLAY),
+                "participantType" to FieldPresentation(
+                    "Participant type", UiWidget.SELECT,
+                ),
+                "orphan" to FieldPresentation("Orphan", UiWidget.DISPLAY),
+            ),
+        )
+        val catalogue = tournamentCreateFieldCatalogue()
+
+        val report = validateLayoutDefinition(
+            definition,
+            catalogue.mapValues { it.value.dataType },
+            catalogue.filterValues {
+                it.required && it.defaultValue == null
+            }.keys,
+        )
+
+        assertEquals(
+            LayoutValidationReport(
+                unknownFields = setOf("ghost", "orphan"),
+                incompatibleWidgets = setOf("participantType"),
+                omittedRequiredFields = emptySet(),
+                missingPresentations = setOf("ghost"),
+                duplicatePlacements = setOf("name"),
+            ),
+            report,
+        )
+        assertEquals(false, report.isValid)
+    }
+
+    @Test
+    fun `accepts display columns without requiring creation fields`() {
+        val definition = LayoutDefinition(
+            title = "Tournaments",
+            layout = UiLayout(
+                type = UiLayoutType.TABLE,
+                columns = listOf("participantType"),
+            ),
+            fields = mapOf(
+                "participantType" to FieldPresentation(
+                    "Participant type", UiWidget.DISPLAY,
+                ),
+            ),
+        )
+
+        val report = validateLayoutDefinition(
+            definition,
+            mapOf("participantType" to UiDataType.ENUM),
+            requiredWithoutDefaults = setOf("name", "slug"),
+        )
+
+        assertEquals(true, report.isValid)
     }
 }

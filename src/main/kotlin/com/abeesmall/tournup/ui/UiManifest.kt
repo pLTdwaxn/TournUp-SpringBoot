@@ -16,7 +16,8 @@ data class UiManifest(
 
 data class UiLayout(
     val type: UiLayoutType,
-    val sections: List<UiSection>,
+    val sections: List<UiSection> = emptyList(),
+    val columns: List<String> = emptyList(),
 )
 
 data class UiSection(
@@ -55,13 +56,15 @@ data class UiCommand(
 enum class UiOperation(
     @get:JsonValue val wireValue: String,
 ) {
-    CREATE("create")
+    CREATE("create"),
+    LIST("list"),
 }
 
 enum class UiLayoutType(
     @get:JsonValue val wireValue: String,
 ) {
-    FORM("form")
+    FORM("form"),
+    TABLE("table"),
 }
 
 enum class UiDataType(
@@ -77,6 +80,7 @@ enum class UiWidget(
     TEXT("text"),
     TEXTAREA("textarea"),
     SELECT("select"),
+    DISPLAY("display")
 }
 
 enum class UiBehaviourType(

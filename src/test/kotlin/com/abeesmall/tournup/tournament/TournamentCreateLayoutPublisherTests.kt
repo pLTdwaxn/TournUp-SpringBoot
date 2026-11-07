@@ -33,11 +33,16 @@ import kotlin.test.assertNull
     PublishedUiLayoutReader::class,
 )
 class TournamentCreateLayoutPublisherTests {
-    @Autowired lateinit var layouts: UiLayoutRepository
-    @Autowired lateinit var reader: PublishedUiLayoutReader
-    @Autowired lateinit var revisions: UiLayoutRevisionRepository
-    @Autowired lateinit var publisher: TournamentCreateLayoutPublisher
-    @Autowired lateinit var entityManager: EntityManager
+    @Autowired
+    lateinit var layouts: UiLayoutRepository
+    @Autowired
+    lateinit var reader: PublishedUiLayoutReader
+    @Autowired
+    lateinit var revisions: UiLayoutRevisionRepository
+    @Autowired
+    lateinit var publisher: TournamentCreateLayoutPublisher
+    @Autowired
+    lateinit var entityManager: EntityManager
 
     @Test
     fun `publishes a valid revision`() {
@@ -45,7 +50,8 @@ class TournamentCreateLayoutPublisherTests {
             UiLayoutRecord(
                 application = "tournup-web",
                 resource = "tournament",
-                operation = UiOperation.CREATE.wireValue),
+                operation = UiOperation.CREATE.wireValue
+            ),
         )
         val definition = LayoutDefinition(
             title = "Create tournament",
@@ -133,5 +139,44 @@ class TournamentCreateLayoutPublisherTests {
         assertNull(
             reader.find("unknown-app", "tournament", UiOperation.CREATE.wireValue),
         )
+    }
+
+    @Test
+    fun `rejects a table layout for tournament creation`() {
+        val layout = layouts.saveAndFlush(
+            UiLayoutRecord(
+                application = "tournup-web",
+                resource = "tournament",
+                operation = UiOperation.CREATE.wireValue,
+            ),
+        )
+        revisions.saveAndFlush(
+            UiLayoutRevisionRecord(
+                id = UiLayoutRevisionId(layout.id, 1),
+                contractVersion = 1,
+                definition = LayoutDefinition(
+                    title = "Tournaments",
+                    layout = UiLayout(
+                        type = UiLayoutType.TABLE,
+                        columns = listOf("name"),
+                    ),
+                    fields = mapOf(
+                        "name" to FieldPresentation(
+                            "Name", UiWidget.DISPLAY,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            publisher.publish(layout.id, 1)
+        }
+
+        assertEquals(
+            "Tournament creation requires a form layout",
+            error.message,
+        )
+        assertNull(layout.publishedRevision)
     }
 }

@@ -18,4 +18,24 @@ class UiManifestTests {
             mapper.writeValueAsString(UiLayoutType.FORM),
         )
     }
+
+    @Test
+    fun `table contract preserves wire values and column order`() {
+        val layout = UiLayout(
+            type = UiLayoutType.TABLE,
+            columns = listOf("participantType", "name"),
+        )
+        val json = mapper.readTree(mapper.writeValueAsString(layout))
+
+        assertEquals("table", json.path("type").stringValue())
+        assertEquals(
+            listOf("participantType", "name"),
+            json.path("columns")
+                .valueStream()
+                .map { it.stringValue() }
+                .toList(),
+        )
+        assertEquals("\"list\"", mapper.writeValueAsString(UiOperation.LIST))
+        assertEquals("\"display\"", mapper.writeValueAsString(UiWidget.DISPLAY))
+    }
 }
