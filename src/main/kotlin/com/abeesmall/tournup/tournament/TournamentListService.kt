@@ -15,7 +15,7 @@ class TournamentListService(
         return TournamentListResponse(
             manifest = tournamentListManifest(),
             items = result.content.map { tournament ->
-                TournamentListItem(
+                TournamentData(
                     id = tournament.id,
                     slug = tournament.slug,
                     name = tournament.name,

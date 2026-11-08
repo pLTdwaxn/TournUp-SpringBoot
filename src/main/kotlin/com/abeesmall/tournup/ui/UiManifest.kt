@@ -58,6 +58,7 @@ enum class UiOperation(
 ) {
     CREATE("create"),
     LIST("list"),
+    READ("read"),
 }
 
 enum class UiLayoutType(
@@ -65,6 +66,7 @@ enum class UiLayoutType(
 ) {
     FORM("form"),
     TABLE("table"),
+    DETAIL("detail"),
 }
 
 enum class UiDataType(

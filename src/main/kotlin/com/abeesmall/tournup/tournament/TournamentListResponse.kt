@@ -5,11 +5,11 @@ import java.util.UUID
 
 data class TournamentListResponse(
     val manifest: UiManifest,
-    val items: List<TournamentListItem>,
+    val items: List<TournamentData>,
     val pagination: TournamentListPagination,
 )
 
-data class TournamentListItem(
+data class TournamentData(
     val id: UUID,
     val slug: String,
     val name: String,

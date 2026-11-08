@@ -2,7 +2,7 @@ package com.abeesmall.tournup.ui
 
 private fun layoutFieldIds(definition: LayoutDefinition): List<String> =
     when (definition.layout.type) {
-        UiLayoutType.FORM ->
+        UiLayoutType.FORM, UiLayoutType.DETAIL ->
             definition.layout.sections.flatMap { it.fields }
 
         UiLayoutType.TABLE ->
@@ -39,7 +39,7 @@ fun incompatibleWidgetFieldIds(
                         presentation.widget != UiWidget.SELECT
                 }
 
-                UiLayoutType.TABLE ->
+                UiLayoutType.TABLE, UiLayoutType.DETAIL ->
                     presentation.widget != UiWidget.DISPLAY
             }
         }
@@ -49,7 +49,7 @@ fun omittedRequiredFieldIds(
     definition: LayoutDefinition,
     requiredWithoutDefaults: Set<String>,
 ): Set<String> {
-    if (definition.layout.type == UiLayoutType.TABLE) {
+    if (definition.layout.type != UiLayoutType.FORM) {
         return emptySet()
     }
 

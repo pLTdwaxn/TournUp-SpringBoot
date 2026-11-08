@@ -11,17 +11,30 @@ import com.abeesmall.tournup.ui.UiWidget
 
 
 fun tournamentListManifest(): UiManifest =
-    UiManifest(
-        contractVersion = 1,
+    tournamentReadManifest(
         id = "tournament-list",
-        application = "tournup-web",
-        resource = "tournament",
         operation = UiOperation.LIST,
         title = "Tournaments",
         layout = UiLayout(
             type = UiLayoutType.TABLE,
             columns = listOf("name", "participantType", "handicapMode"),
         ),
+    )
+
+internal fun tournamentReadManifest(
+    id: String,
+    operation: UiOperation,
+    title: String,
+    layout: UiLayout,
+): UiManifest =
+    UiManifest(
+        contractVersion = 1,
+        id = id,
+        application = "tournup-web",
+        resource = "tournament",
+        operation = operation,
+        title = title,
+        layout = layout,
         fields = mapOf(
             "name" to displayField("Name"),
             "slug" to displayField("Slug"),
