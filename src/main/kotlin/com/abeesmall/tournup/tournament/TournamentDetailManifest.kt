@@ -7,7 +7,7 @@ import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiSection
 
 fun tournamentDetailManifest(title: String): UiManifest =
-    tournamentReadManifest(
+    tournamentManifest(
         id = "tournament-detail",
         operation = UiOperation.READ,
         title = title,

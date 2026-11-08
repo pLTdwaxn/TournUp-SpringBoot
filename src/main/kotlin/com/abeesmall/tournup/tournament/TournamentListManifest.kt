@@ -1,5 +1,7 @@
 package com.abeesmall.tournup.tournament
 
+import com.abeesmall.tournup.ui.UiCommand
+import com.abeesmall.tournup.ui.UiCommandMethod
 import com.abeesmall.tournup.ui.UiDataType
 import com.abeesmall.tournup.ui.UiField
 import com.abeesmall.tournup.ui.UiLayout
@@ -10,8 +12,8 @@ import com.abeesmall.tournup.ui.UiOption
 import com.abeesmall.tournup.ui.UiWidget
 
 
-fun tournamentListManifest(): UiManifest =
-    tournamentReadManifest(
+fun tournamentListManifest(canCreate: Boolean = false): UiManifest =
+    tournamentManifest(
         id = "tournament-list",
         operation = UiOperation.LIST,
         title = "Tournaments",
@@ -19,9 +21,22 @@ fun tournamentListManifest(): UiManifest =
             type = UiLayoutType.TABLE,
             columns = listOf("name", "participantType", "handicapMode"),
         ),
+    ).copy(
+        commands = if (canCreate) {
+            listOf(
+                UiCommand(
+                    id = "create",
+                    label = "Create tournament",
+                    method = UiCommandMethod.GET,
+                    href = "/api/tournaments/create/",
+                ),
+            )
+        } else {
+            emptyList()
+        },
     )
 
-internal fun tournamentReadManifest(
+internal fun tournamentManifest(
     id: String,
     operation: UiOperation,
     title: String,

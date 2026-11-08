@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -131,5 +132,46 @@ class TournamentListControllerTests(
                 jsonPath("$.pagination.totalElements", equalTo(0))
                 jsonPath("$.pagination.totalPages", equalTo(0))
             }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "SUPER_ADMIN",
+            "CLUB_MANAGER",
+            "TOURNAMENT_MANAGER",
+            "PLAYER",
+            "COACH",
+        ],
+    )
+    fun `creation command is advertised only to writers`(role: String) {
+        val pageable = PageRequest.of(0, 20, Sort.by("name", "id"))
+        whenever(tournaments.findAll(pageable)).thenReturn(
+            PageImpl(emptyList<Tournament>(), pageable, 0L),
+        )
+        val canCreate = role in setOf(
+            "SUPER_ADMIN",
+            "CLUB_MANAGER",
+            "TOURNAMENT_MANAGER",
+        )
+
+        mockMvc.get("/api/tournaments/") {
+            with(user("viewer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath(
+                "$.manifest.commands.length()",
+                equalTo(if (canCreate) 1 else 0),
+            )
+
+            if (canCreate) {
+                jsonPath("$.manifest.commands[0].id", equalTo("create"))
+                jsonPath("$.manifest.commands[0].method", equalTo("GET"))
+                jsonPath(
+                    "$.manifest.commands[0].href",
+                    equalTo("/api/tournaments/create/"),
+                )
+            }
+        }
     }
 }

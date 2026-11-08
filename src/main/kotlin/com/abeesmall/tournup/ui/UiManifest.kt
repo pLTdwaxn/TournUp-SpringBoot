@@ -34,6 +34,8 @@ data class UiField(
     val editable: Boolean = true,
     val options: List<UiOption> = emptyList(),
     val behaviours: List<UiBehaviour> = emptyList(),
+    val maxLength: Int? = null,
+    val pattern: String? = null,
 )
 
 data class UiOption(
@@ -94,5 +96,6 @@ enum class UiBehaviourType(
 enum class UiCommandMethod(
     @get:JsonValue val wireValue: String,
 ) {
+    GET("GET"),
     POST("POST"),
 }

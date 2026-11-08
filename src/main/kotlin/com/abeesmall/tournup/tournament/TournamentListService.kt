@@ -9,11 +9,11 @@ class TournamentListService(
     private val tournaments: TournamentRepository,
 ) {
     @Transactional(readOnly = true)
-    fun list(pageable: Pageable): TournamentListResponse {
+    fun list(pageable: Pageable, canCreate: Boolean = false): TournamentListResponse {
         val result = tournaments.findAll(pageable)
 
         return TournamentListResponse(
-            manifest = tournamentListManifest(),
+            manifest = tournamentListManifest(canCreate),
             items = result.content.map { tournament ->
                 TournamentData(
                     id = tournament.id,

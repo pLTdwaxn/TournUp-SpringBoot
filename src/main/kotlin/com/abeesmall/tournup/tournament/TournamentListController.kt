@@ -1,8 +1,11 @@
 package com.abeesmall.tournup.tournament
 
+import com.abeesmall.tournup.security.canManageTournaments
+
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -16,6 +19,7 @@ class TournamentListController(
     fun list(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
+        authentication: Authentication,
     ): TournamentListResponse {
         if (page < 0) {
             throw ResponseStatusException(
@@ -32,6 +36,7 @@ class TournamentListController(
 
         return service.list(
             PageRequest.of(page, size, Sort.by("name", "id")),
+            canCreate = canManageTournaments(authentication),
         )
     }
 }
