@@ -24,11 +24,14 @@ import kotlin.test.assertNull
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JdbcTenantCatalogTests {
 
-    private val postgres = PostgreSQLContainer("postgres:18-alpine")
-        .withDatabaseName("catalog_test")
-        .withUsername("catalog_test_owner")
-        .withPassword("catalog_test_owner_password")
-        .withInitScript("catalog/init.sql")
+    private val postgres =
+        PostgreSQLContainer(
+            "postgres@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873",
+        )
+            .withDatabaseName("catalog_test")
+            .withUsername("catalog_test_owner")
+            .withPassword("catalog_test_owner_password")
+            .withInitScript("catalog/init.sql")
 
     private val tenant = CatalogTenant(
         id = UUID.randomUUID(),
