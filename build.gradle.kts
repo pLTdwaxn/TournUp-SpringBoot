@@ -76,3 +76,33 @@ kotlin {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+val tools = sourceSets.create("tools") {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+
+configurations[tools.implementationConfigurationName]
+    .extendsFrom(configurations.implementation.get())
+
+configurations[tools.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations.runtimeOnly.get())
+
+listOf(
+    tools.compileClasspathConfigurationName,
+    tools.runtimeClasspathConfigurationName,
+).forEach { configurationName ->
+    configurations.named(configurationName) {
+        resolutionStrategy.activateDependencyLocking()
+    }
+}
+
+tasks.register<JavaExec>("seedTournaments") {
+    group = "development"
+    description = "Seed local dummy tournaments"
+    classpath = tools.runtimeClasspath
+    mainClass.set("com.abeesmall.tournup.tools.tournament.SeedTournamentsKt")
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    })
+}
