@@ -20,16 +20,16 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Java
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "21.0.13+9"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
         with:
           cache-provider: basic
 
@@ -47,13 +47,13 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Build image and archive
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           tags: tournup:build
@@ -62,7 +62,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Store image archive
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: tournup-image
           path: /tmp/tournup.tar
@@ -77,7 +77,7 @@ jobs:
 
     steps:
       - name: Download image
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: tournup-image
           path: /tmp
@@ -86,7 +86,7 @@ jobs:
         run: docker load --input /tmp/tournup.tar
 
       - name: Log in to Vultr CR
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           registry: ${{ vars.VULTR_CR_REGISTRY }}
           username: ${{ secrets.VULTR_CR_USERNAME }}
@@ -108,7 +108,7 @@ jobs:
 
     steps:
       - name: Download image
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: tournup-image
           path: /tmp
@@ -117,7 +117,7 @@ jobs:
         run: docker load --input /tmp/tournup.tar
 
       - name: Log in to Vultr CR
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           registry: ${{ vars.VULTR_CR_REGISTRY }}
           username: ${{ secrets.VULTR_CR_USERNAME }}
