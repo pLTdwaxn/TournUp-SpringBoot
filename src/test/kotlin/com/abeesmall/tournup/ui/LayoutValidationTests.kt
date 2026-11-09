@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.ui
 
-import com.abeesmall.tournup.tournament.tournamentCreateFieldCatalogue
+import com.abeesmall.tournup.manifest.tournament.tournamentCreateFieldCatalogue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

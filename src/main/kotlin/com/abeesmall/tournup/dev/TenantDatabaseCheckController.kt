@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.dev
 
-import com.abeesmall.tournup.tournament.TournamentRepository
+import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import java.util.UUID
