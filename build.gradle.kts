@@ -1,3 +1,5 @@
+import org.gradle.api.artifacts.dsl.LockMode
+
 plugins {
 	kotlin("jvm") version "2.3.21"
 	kotlin("plugin.spring") version "2.3.21"
@@ -22,6 +24,22 @@ tasks.bootJar {
 
 repositories {
 	mavenCentral()
+}
+
+listOf(
+    "compileClasspath",
+    "runtimeClasspath",
+    "productionRuntimeClasspath",
+    "testCompileClasspath",
+    "testRuntimeClasspath",
+).forEach { configurationName ->
+    configurations.named(configurationName) {
+        resolutionStrategy.activateDependencyLocking()
+    }
+}
+
+dependencyLocking {
+    lockMode = LockMode.STRICT
 }
 
 dependencies {

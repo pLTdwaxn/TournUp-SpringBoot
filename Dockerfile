@@ -2,7 +2,7 @@ FROM eclipse-temurin:21.0.13_9-jdk-noble@sha256:114cabb73033ca4ce7ceec3deb62396b
 
 WORKDIR /workspace
 
-COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradlew settings.gradle.kts build.gradle.kts gradle.lockfile ./
 COPY gradle ./gradle
 
 RUN chmod +x gradlew
