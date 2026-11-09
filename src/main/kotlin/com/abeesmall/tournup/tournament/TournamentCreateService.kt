@@ -45,7 +45,10 @@ class TournamentCreateService(
         }
 
         return TournamentDetailResponse(
-            manifest = tournamentDetailManifest(tournament.name),
+            manifest = tournamentDetailManifest(
+                title = tournament.name,
+                editHref = "/api/tournaments/${tournament.id}/edit/",
+            ),
             item = TournamentData(
                 id = tournament.id,
                 slug = tournament.slug,

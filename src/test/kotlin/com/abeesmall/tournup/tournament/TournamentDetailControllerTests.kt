@@ -6,6 +6,8 @@ import java.util.UUID
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito.`when` as whenever
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -109,5 +112,44 @@ class TournamentDetailControllerTests(
                 jsonPath("$.item.participationMode", equalTo("REGISTRATION"))
                 jsonPath("$.item.handicapMode", equalTo("CARRY_FORWARD"))
             }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "SUPER_ADMIN,1",
+        "CLUB_MANAGER,1",
+        "TOURNAMENT_MANAGER,1",
+        "PLAYER,0",
+        "COACH,0",
+    )
+    fun `detail exposes edit only to writer roles`(
+        role: String,
+        expectedCommands: Int,
+    ) {
+        val tournament = Tournament(
+            slug = "winter-open",
+            name = "Winter Open",
+        )
+        whenever(tournaments.findById(tournament.id))
+            .thenReturn(Optional.of(tournament))
+
+        mockMvc.get("/api/tournaments/${tournament.id}/") {
+            with(user("viewer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.manifest.commands.length()", equalTo(expectedCommands))
+
+            if (expectedCommands == 1) {
+                jsonPath("$.manifest.commands[0].id", equalTo("edit"))
+                jsonPath("$.manifest.commands[0].method", equalTo("GET"))
+                jsonPath(
+                    "$.manifest.commands[0].href",
+                    equalTo("/api/tournaments/${tournament.id}/edit/"),
+                )
+            }
+        }
+
+        verify(tournaments).findById(tournament.id)
+        verifyNoMoreInteractions(tournaments)
     }
 }

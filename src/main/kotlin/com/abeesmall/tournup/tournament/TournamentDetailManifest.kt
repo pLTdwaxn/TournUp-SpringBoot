@@ -1,12 +1,17 @@
 package com.abeesmall.tournup.tournament
 
+import com.abeesmall.tournup.ui.UiCommand
+import com.abeesmall.tournup.ui.UiCommandMethod
 import com.abeesmall.tournup.ui.UiLayout
 import com.abeesmall.tournup.ui.UiLayoutType
 import com.abeesmall.tournup.ui.UiManifest
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiSection
 
-fun tournamentDetailManifest(title: String): UiManifest =
+fun tournamentDetailManifest(
+    title: String,
+    editHref: String? = null,
+): UiManifest =
     tournamentManifest(
         id = "tournament-detail",
         operation = UiOperation.READ,
@@ -30,4 +35,17 @@ fun tournamentDetailManifest(title: String): UiManifest =
                 ),
             ),
         ),
+    ).copy(
+        commands = if (editHref != null) {
+            listOf(
+                UiCommand(
+                    id = "edit",
+                    label = "Edit tournament",
+                    method = UiCommandMethod.GET,
+                    href = editHref,
+                ),
+            )
+        } else {
+            emptyList()
+        },
     )

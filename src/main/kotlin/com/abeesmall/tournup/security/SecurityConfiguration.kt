@@ -43,6 +43,14 @@ class SecurityConfiguration {
                     HttpMethod.POST,
                     "/api/tournaments/",
                 ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/tournaments/{id}/edit/",
+                ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/tournaments/{id}/",
+                ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
                 .anyRequest().authenticated()
         }
 

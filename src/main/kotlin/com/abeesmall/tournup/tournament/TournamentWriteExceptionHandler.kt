@@ -7,8 +7,13 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
-@RestControllerAdvice(assignableTypes = [TournamentCreateController::class])
-class TournamentCreateExceptionHandler {
+@RestControllerAdvice(
+    assignableTypes = [
+        TournamentCreateController::class,
+        TournamentUpdateController::class,
+    ],
+)
+class TournamentWriteExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun invalidRequest(
         exception: MethodArgumentNotValidException,

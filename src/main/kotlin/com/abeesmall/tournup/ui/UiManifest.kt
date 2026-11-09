@@ -61,6 +61,7 @@ enum class UiOperation(
     CREATE("create"),
     LIST("list"),
     READ("read"),
+    UPDATE("update"),
 }
 
 enum class UiLayoutType(
@@ -98,4 +99,5 @@ enum class UiCommandMethod(
 ) {
     GET("GET"),
     POST("POST"),
+    PUT("PUT"),
 }

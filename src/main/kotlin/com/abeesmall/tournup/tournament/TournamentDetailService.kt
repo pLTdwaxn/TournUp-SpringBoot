@@ -9,12 +9,22 @@ class TournamentDetailService(
     private val tournaments: TournamentRepository,
 ) {
     @Transactional(readOnly = true)
-    fun find(id: UUID): TournamentDetailResponse? {
+    fun find(
+        id: UUID,
+        canUpdate: Boolean = false,
+    ): TournamentDetailResponse? {
         val tournament = tournaments.findById(id).orElse(null)
             ?: return null
 
         return TournamentDetailResponse(
-            manifest = tournamentDetailManifest(tournament.name),
+            manifest = tournamentDetailManifest(
+                title = tournament.name,
+                editHref = if (canUpdate) {
+                    "/api/tournaments/${tournament.id}/edit/"
+                } else {
+                    null
+                },
+            ),
             item = TournamentData(
                 id = tournament.id,
                 slug = tournament.slug,
