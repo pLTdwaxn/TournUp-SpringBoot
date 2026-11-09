@@ -1,7 +1,12 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.dto.audit.LastAuditValue
 import com.abeesmall.tournup.dto.tournament.TournamentListResponse
+import com.abeesmall.tournup.model.tournament.Tournament
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.canManageTournaments
+import com.abeesmall.tournup.security.canViewLastAudit
+
 import com.abeesmall.tournup.service.tournament.TournamentListService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -15,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException
 @RestController
 class TournamentListController(
     private val service: TournamentListService,
+    private val auditReader: LatestAuditReader,
 ) {
     @GetMapping("/api/tournaments/")
     fun list(
@@ -35,9 +41,26 @@ class TournamentListController(
             )
         }
 
-        return service.list(
+        val response = service.list(
             PageRequest.of(page, size, Sort.by("name", "id")),
             canCreate = canManageTournaments(authentication),
+        )
+
+        if (!canViewLastAudit(authentication)) {
+            return response
+        }
+
+        val lastAudits = auditReader.findLatest(
+            Tournament::class.java,
+            response.items.map { it.id },
+        )
+
+        return response.copy(
+            items = response.items.map { item ->
+                item.copy(
+                    lastAudit = LastAuditValue(lastAudits[item.id]),
+                )
+            },
         )
     }
 }

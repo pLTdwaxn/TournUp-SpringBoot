@@ -1,12 +1,16 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.model.tournament.Tournament
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.tournament.TournamentDetailService
+
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 import org.hamcrest.Matchers.contains
@@ -14,6 +18,7 @@ import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.`when` as whenever
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
@@ -35,6 +40,9 @@ class TournamentDetailControllerTests(
     @MockitoBean
     private lateinit var tournaments: TournamentRepository
 
+    @MockitoBean
+    private lateinit var auditReader: LatestAuditReader
+
     @Test
     fun `requires an authenticated session`() {
         mockMvc.get("/api/tournaments/${UUID.randomUUID()}/")
@@ -42,7 +50,7 @@ class TournamentDetailControllerTests(
                 status { isUnauthorized() }
             }
 
-        verifyNoInteractions(tournaments)
+        verifyNoInteractions(tournaments, auditReader)
     }
 
     @Test
@@ -53,7 +61,7 @@ class TournamentDetailControllerTests(
                 status { isBadRequest() }
             }
 
-        verifyNoInteractions(tournaments)
+        verifyNoInteractions(tournaments, auditReader)
     }
 
     @Test
@@ -157,5 +165,119 @@ class TournamentDetailControllerTests(
 
         verify(tournaments).findById(tournament.id)
         verifyNoMoreInteractions(tournaments)
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"],
+    )
+    fun `permitted roles receive latest audit metadata`(role: String) {
+        val tournament = Tournament(slug = "winter-open", name = "Winter Open")
+        val timestamp = Instant.parse("2026-11-10T00:00:00Z")
+        val actorId = UUID.randomUUID()
+
+        whenever(tournaments.findById(tournament.id))
+            .thenReturn(Optional.of(tournament))
+        whenever(
+            auditReader.findLatest(
+                Tournament::class.java,
+                listOf(tournament.id),
+            ),
+        ).thenReturn(
+            mapOf(
+                tournament.id to LastAuditData(
+                    revision = 42,
+                    timestamp = timestamp,
+                    actorId = actorId,
+                ),
+            ),
+        )
+
+        mockMvc.get("/api/tournaments/${tournament.id}/") {
+            with(user("viewer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.item.lastAudit.revision", equalTo(42))
+            jsonPath(
+                "$.item.lastAudit.timestamp",
+                equalTo("2026-11-10T00:00:00Z"),
+            )
+            jsonPath(
+                "$.item.lastAudit.actorId",
+                equalTo(actorId.toString()),
+            )
+        }
+
+        verify(auditReader).findLatest(
+            Tournament::class.java,
+            listOf(tournament.id),
+        )
+        verifyNoMoreInteractions(auditReader)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["PLAYER", "COACH"])
+    fun `restricted roles receive no audit field or lookup`(role: String) {
+        val tournament = Tournament(slug = "winter-open", name = "Winter Open")
+        whenever(tournaments.findById(tournament.id))
+            .thenReturn(Optional.of(tournament))
+
+        mockMvc.get("/api/tournaments/${tournament.id}/") {
+            with(user("viewer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.item.id", equalTo(tournament.id.toString()))
+            jsonPath("$.item.lastAudit") {
+                doesNotHaveJsonPath()
+            }
+        }
+
+        verifyNoInteractions(auditReader)
+    }
+
+    @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `permitted record without history has explicit null audit`() {
+        val tournament = Tournament(slug = "winter-open", name = "Winter Open")
+        whenever(tournaments.findById(tournament.id))
+            .thenReturn(Optional.of(tournament))
+        whenever(
+            auditReader.findLatest(
+                Tournament::class.java,
+                listOf(tournament.id),
+            ),
+        ).thenReturn(emptyMap())
+
+        mockMvc.get("/api/tournaments/${tournament.id}/")
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.item.lastAudit") {
+                    hasJsonPath()
+                    value(null)
+                }
+            }
+
+        verify(auditReader).findLatest(
+            Tournament::class.java,
+            listOf(tournament.id),
+        )
+        verifyNoMoreInteractions(auditReader)
+    }
+
+    @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `missing record does not trigger an audit lookup`() {
+        val id = UUID.randomUUID()
+        whenever(tournaments.findById(id))
+            .thenReturn(Optional.empty<Tournament>())
+
+        mockMvc.get("/api/tournaments/$id/")
+            .andExpect {
+                status { isNotFound() }
+            }
+
+        verify(tournaments).findById(id)
+        verifyNoMoreInteractions(tournaments)
+        verifyNoInteractions(auditReader)
     }
 }
