@@ -7,7 +7,6 @@ import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.canManageSeasons
 import com.abeesmall.tournup.security.canViewLastAudit
 import com.abeesmall.tournup.service.season.SeasonDetailService
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,18 +21,18 @@ class SeasonDetailController(
 ) {
     @GetMapping(
         value = [
-            "/api/seasons/{seasonId}/",
-            "/api/tournaments/{tournamentId}/seasons/{seasonId}/",
+            "/api/seasons/{identifier}/",
+            "/api/tournaments/{tournamentIdentifier}/seasons/{identifier}/",
         ],
     )
     fun detail(
-        @PathVariable("seasonId") seasonId: UUID,
-        @PathVariable(value = "tournamentId", required = false) tournamentId: UUID?,
+        @PathVariable("identifier") identifier: String,
+        @PathVariable(value = "tournamentIdentifier", required = false) tournamentIdentifier: String?,
         authentication: Authentication,
     ): SeasonDetailResponse {
         val response = service.find(
-            id = seasonId,
-            tournamentId = tournamentId,
+            identifier = identifier,
+            tournamentIdentifier = tournamentIdentifier,
             canUpdate = canManageSeasons(authentication),
         )
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found")

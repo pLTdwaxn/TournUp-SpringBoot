@@ -8,21 +8,35 @@ import com.abeesmall.tournup.manifest.season.seasonDetailManifest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
-import java.util.UUID
+import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.service.RecordContextRequiredException
+import com.abeesmall.tournup.service.parseRecordId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 class SeasonDetailService(
     private val seasons: SeasonRepository,
+    private val tournaments: TournamentRepository,
 ) {
     @Transactional(readOnly = true)
     fun find(
-        id: UUID,
-        tournamentId: UUID? = null,
+        identifier: String,
+        tournamentIdentifier: String? = null,
         canUpdate: Boolean = false,
     ): SeasonDetailResponse? {
-        val season = seasons.findById(id).orElse(null) ?: return null
+        val id = parseRecordId(identifier)
+        if (id == null && tournamentIdentifier == null) {
+            throw RecordContextRequiredException("Tournament")
+        }
+        val tournamentId = tournamentIdentifier?.let { parent ->
+            parseRecordId(parent) ?: tournaments.findBySlug(parent)?.id ?: return null
+        }
+        val season = if (id != null) {
+            seasons.findById(id).orElse(null)
+        } else {
+            seasons.findByTournamentIdAndSlug(requireNotNull(tournamentId), identifier)
+        } ?: return null
         val tournament = season.tournament
         if (tournamentId != null && tournament.id != tournamentId) {
             return null

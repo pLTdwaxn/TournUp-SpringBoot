@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.controller.season
 
+import com.abeesmall.tournup.service.RecordContextRequiredException
 import com.abeesmall.tournup.service.season.SeasonFieldConflictException
 import com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException
 import jakarta.validation.ConstraintViolationException
@@ -15,9 +16,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
         SeasonCreateController::class,
         SeasonListController::class,
         SeasonUpdateController::class,
+        SeasonDetailController::class,
     ],
 )
 class SeasonExceptionHandler {
+    @ExceptionHandler(RecordContextRequiredException::class)
+    fun missingContext(exception: RecordContextRequiredException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.message.orEmpty())
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun invalidRequest(exception: MethodArgumentNotValidException): ProblemDetail =
         validationProblem(

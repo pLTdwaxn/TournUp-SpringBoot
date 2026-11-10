@@ -8,7 +8,6 @@ import com.abeesmall.tournup.security.canManageTournaments
 import com.abeesmall.tournup.security.canViewLastAudit
 import com.abeesmall.tournup.service.tournament.TournamentDetailService
 
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
@@ -21,13 +20,13 @@ class TournamentDetailController(
     private val service: TournamentDetailService,
     private val auditReader: LatestAuditReader,
 ) {
-    @GetMapping("/api/tournaments/{id}/")
+    @GetMapping("/api/tournaments/{identifier}/")
     fun detail(
-        @PathVariable("id") id: UUID,
+        @PathVariable("identifier") identifier: String,
         authentication: Authentication,
     ): TournamentDetailResponse {
         val response = service.find(
-            id = id,
+            identifier = identifier,
             canUpdate = canManageTournaments(authentication),
         ) ?: throw ResponseStatusException(
             HttpStatus.NOT_FOUND,

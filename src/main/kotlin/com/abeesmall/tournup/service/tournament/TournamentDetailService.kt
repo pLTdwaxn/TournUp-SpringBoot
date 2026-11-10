@@ -4,7 +4,7 @@ import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.dto.tournament.TournamentDetailResponse
 import com.abeesmall.tournup.manifest.tournament.tournamentDetailManifest
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
-import java.util.UUID
+import com.abeesmall.tournup.service.parseRecordId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,11 +14,15 @@ class TournamentDetailService(
 ) {
     @Transactional(readOnly = true)
     fun find(
-        id: UUID,
+        identifier: String,
         canUpdate: Boolean = false,
     ): TournamentDetailResponse? {
-        val tournament = tournaments.findById(id).orElse(null)
-            ?: return null
+        val id = parseRecordId(identifier)
+        val tournament = if (id != null) {
+            tournaments.findById(id).orElse(null)
+        } else {
+            tournaments.findBySlug(identifier)
+        } ?: return null
 
         return TournamentDetailResponse(
             manifest = tournamentDetailManifest(

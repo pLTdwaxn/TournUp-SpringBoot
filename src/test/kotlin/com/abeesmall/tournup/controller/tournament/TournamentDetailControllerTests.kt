@@ -13,6 +13,7 @@ import com.abeesmall.tournup.service.tournament.TournamentDetailService
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import kotlin.test.assertEquals
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
@@ -20,6 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.`when` as whenever
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -49,19 +51,23 @@ class TournamentDetailControllerTests(
             .andExpect {
                 status { isUnauthorized() }
             }
+        mockMvc.get("/api/tournaments/winter-open/")
+            .andExpect { status { isUnauthorized() } }
 
         verifyNoInteractions(tournaments, auditReader)
     }
 
     @Test
     @WithMockUser(roles = ["PLAYER"])
-    fun `rejects a malformed tournament ID`() {
+    fun `a non UUID identifier is queried as a slug and returns not found when absent`() {
         mockMvc.get("/api/tournaments/not-a-uuid/")
             .andExpect {
-                status { isBadRequest() }
+                status { isNotFound() }
             }
 
-        verifyNoInteractions(tournaments, auditReader)
+        verify(tournaments).findBySlug("not-a-uuid")
+        verifyNoMoreInteractions(tournaments)
+        verifyNoInteractions(auditReader)
     }
 
     @Test
@@ -275,6 +281,61 @@ class TournamentDetailControllerTests(
             .andExpect {
                 status { isNotFound() }
             }
+
+        verify(tournaments).findById(id)
+        verifyNoMoreInteractions(tournaments)
+        verifyNoInteractions(auditReader)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER", "PLAYER", "COACH"])
+    fun `slug and UUID queries return the same detail and permissions`(role: String) {
+        val tournament = Tournament(slug = "winter-open", name = "Winter Open")
+        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findBySlug(tournament.slug)).thenReturn(tournament)
+        val canViewAudit = role in setOf("SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER")
+        if (canViewAudit) {
+            whenever(auditReader.findLatest(Tournament::class.java, listOf(tournament.id))).thenReturn(
+                mapOf(
+                    tournament.id to LastAuditData(
+                        42, Instant.parse("2026-11-10T00:00:00Z"), UUID.randomUUID(),
+                    ),
+                ),
+            )
+        }
+
+        val byId = mockMvc.get("/api/tournaments/${tournament.id}/") {
+            with(user("viewer").roles(role))
+        }.andExpect { status { isOk() } }.andReturn()
+        val bySlug = mockMvc.get("/api/tournaments/${tournament.slug}/") {
+            with(user("viewer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.item.id", equalTo(tournament.id.toString()))
+        }.andReturn()
+
+        assertEquals(byId.response.contentAsString, bySlug.response.contentAsString)
+        verify(tournaments).findById(tournament.id)
+        verify(tournaments).findBySlug(tournament.slug)
+        verifyNoMoreInteractions(tournaments)
+        if (canViewAudit) {
+            verify(auditReader, times(2)).findLatest(Tournament::class.java, listOf(tournament.id))
+            verifyNoMoreInteractions(auditReader)
+        } else {
+            verifyNoInteractions(auditReader)
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["PLAYER"])
+    fun `a parsed UUID is never retried as a slug even if a matching slug exists`() {
+        val id = UUID.randomUUID()
+        whenever(tournaments.findById(id)).thenReturn(Optional.empty())
+        whenever(tournaments.findBySlug(id.toString())).thenReturn(
+            Tournament(slug = id.toString(), name = "A different record"),
+        )
+
+        mockMvc.get("/api/tournaments/$id/").andExpect { status { isNotFound() } }
 
         verify(tournaments).findById(id)
         verifyNoMoreInteractions(tournaments)
