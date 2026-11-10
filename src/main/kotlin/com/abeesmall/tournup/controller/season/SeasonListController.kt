@@ -23,9 +23,9 @@ class SeasonListController(
     private val service: SeasonListService,
     private val auditReader: LatestAuditReader,
 ) {
-    @GetMapping("/api/tournaments/{tournamentId}/seasons/")
+    @GetMapping(value = ["/api/seasons/", "/api/tournaments/{tournamentId}/seasons/"])
     fun list(
-        @PathVariable("tournamentId") tournamentId: UUID,
+        @PathVariable(value = "tournamentId", required = false) tournamentId: UUID?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
         authentication: Authentication,

@@ -54,6 +54,7 @@ class SeasonListControllerTests(
     @Test
     fun `requires authentication`() {
         mockMvc.get(url).andExpect { status { isUnauthorized() } }
+        mockMvc.get("/api/seasons/").andExpect { status { isUnauthorized() } }
         verifyNoInteractions(tournaments, seasons, auditReader)
     }
 
@@ -62,6 +63,7 @@ class SeasonListControllerTests(
     @WithMockUser(roles = ["SUPER_ADMIN"])
     fun `invalid pagination never reaches persistence`(query: String) {
         mockMvc.get("$url?$query").andExpect { status { isBadRequest() } }
+        mockMvc.get("/api/seasons/?$query").andExpect { status { isBadRequest() } }
         verifyNoInteractions(tournaments, seasons, auditReader)
     }
 
@@ -209,6 +211,86 @@ class SeasonListControllerTests(
             jsonPath("$.items[0].lastAudit") { doesNotHaveJsonPath() }
         }
         verifyNoInteractions(auditReader)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER", "PLAYER", "COACH"])
+    fun `listing without a tournament includes records from different tournaments`(role: String) {
+        val first = season("2026 S1", "2026-s1", 2026)
+        val otherTournament = Tournament(slug = "summer-open", name = "Summer Open")
+        val second = Season(
+            tournament = otherTournament, name = "2026 S1", slug = "2026-s1", fromYear = 2026,
+        )
+        val pageable = PageRequest.of(0, 20, sort)
+        whenever(seasons.findAll(pageable)).thenReturn(PageImpl(listOf(first, second), pageable, 2L))
+
+        mockMvc.get("/api/seasons/") {
+            with(user("viewer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.manifest.resource", equalTo("season"))
+            jsonPath("$.manifest.operation", equalTo("list"))
+            jsonPath("$.manifest.layout.columns", contains("name"))
+            jsonPath("$.manifest.commands.length()", equalTo(0))
+            jsonPath("$.items.length()", equalTo(2))
+            jsonPath("$.items[0].id", equalTo(first.id.toString()))
+            jsonPath("$.items[0].tournamentId", equalTo(tournament.id.toString()))
+            jsonPath("$.items[1].id", equalTo(second.id.toString()))
+            jsonPath("$.items[1].tournamentId", equalTo(otherTournament.id.toString()))
+            jsonPath("$.pagination.totalElements", equalTo(2))
+            jsonPath("$.pagination.totalPages", equalTo(1))
+        }
+
+        verify(seasons).findAll(pageable)
+        verifyNoMoreInteractions(seasons)
+        verifyNoInteractions(tournaments)
+        if (role in setOf("SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER")) {
+            verify(auditReader).findLatest(Season::class.java, listOf(first.id, second.id))
+            verifyNoMoreInteractions(auditReader)
+        } else {
+            verifyNoInteractions(auditReader)
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["PLAYER"])
+    fun `listing without a tournament preserves pagination and stable sorting`() {
+        val record = season("2026 S2", "2026-s2", 2026)
+        val pageable = PageRequest.of(1, 1, sort)
+        whenever(seasons.findAll(pageable)).thenReturn(PageImpl(listOf(record), pageable, 3L))
+
+        mockMvc.get("/api/seasons/?page=1&size=1").andExpect {
+            status { isOk() }
+            jsonPath("$.items.length()", equalTo(1))
+            jsonPath("$.items[0].id", equalTo(record.id.toString()))
+            jsonPath("$.pagination.page", equalTo(1))
+            jsonPath("$.pagination.size", equalTo(1))
+            jsonPath("$.pagination.totalElements", equalTo(3))
+            jsonPath("$.pagination.totalPages", equalTo(3))
+        }
+
+        verify(seasons).findAll(pageable)
+        verifyNoMoreInteractions(seasons)
+        verifyNoInteractions(tournaments, auditReader)
+    }
+
+    @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `listing without a tournament returns an empty page without an audit lookup`() {
+        val pageable = PageRequest.of(0, 20, sort)
+        whenever(seasons.findAll(pageable)).thenReturn(PageImpl(emptyList<Season>(), pageable, 0L))
+
+        mockMvc.get("/api/seasons/").andExpect {
+            status { isOk() }
+            jsonPath("$.manifest.title", equalTo("Seasons"))
+            jsonPath("$.manifest.commands.length()", equalTo(0))
+            jsonPath("$.items.length()", equalTo(0))
+            jsonPath("$.pagination.totalElements", equalTo(0))
+        }
+
+        verify(seasons).findAll(pageable)
+        verifyNoMoreInteractions(seasons)
+        verifyNoInteractions(tournaments, auditReader)
     }
 
     private fun givenPage(

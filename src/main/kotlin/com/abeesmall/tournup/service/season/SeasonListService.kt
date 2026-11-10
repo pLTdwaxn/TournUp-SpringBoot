@@ -18,21 +18,25 @@ class SeasonListService(
 ) {
     @Transactional(readOnly = true)
     fun list(
-        tournamentId: UUID,
+        tournamentId: UUID?,
         pageable: Pageable,
         canCreate: Boolean = false,
     ): SeasonListResponse {
-        if (!tournaments.existsById(tournamentId)) {
+        if (tournamentId != null && !tournaments.existsById(tournamentId)) {
             throw SeasonTournamentNotFoundException(tournamentId)
         }
-        val result = seasons.findAllByTournamentId(tournamentId, pageable)
+        val result = if (tournamentId == null) {
+            seasons.findAll(pageable)
+        } else {
+            seasons.findAllByTournamentId(tournamentId, pageable)
+        }
 
         return SeasonListResponse(
             manifest = seasonListManifest(tournamentId, canCreate),
             items = result.content.map { season ->
                 SeasonData(
                     id = season.id,
-                    tournamentId = tournamentId,
+                    tournamentId = season.tournament.id,
                     name = season.name,
                     slug = season.slug,
                     fromYear = season.fromYear,

@@ -8,7 +8,7 @@ import com.abeesmall.tournup.ui.UiManifest
 import com.abeesmall.tournup.ui.UiOperation
 import java.util.UUID
 
-fun seasonListManifest(tournamentId: UUID, canCreate: Boolean = false): UiManifest =
+fun seasonListManifest(tournamentId: UUID?, canCreate: Boolean = false): UiManifest =
     seasonReadManifest(
         id = "season-list",
         operation = UiOperation.LIST,
@@ -18,7 +18,7 @@ fun seasonListManifest(tournamentId: UUID, canCreate: Boolean = false): UiManife
             columns = listOf("name"),
         ),
     ).copy(
-        commands = if (canCreate) {
+        commands = if (canCreate && tournamentId != null) {
             listOf(
                 UiCommand(
                     id = "create",
