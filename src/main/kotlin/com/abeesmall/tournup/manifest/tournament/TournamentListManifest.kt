@@ -18,7 +18,7 @@ fun tournamentListManifest(canCreate: Boolean = false): UiManifest =
         title = "Tournaments",
         layout = UiLayout(
             type = UiLayoutType.TABLE,
-            columns = listOf("name", "participantType", "handicapMode"),
+            columns = listOf("name"),
         ),
     ).copy(
         commands = if (canCreate) {

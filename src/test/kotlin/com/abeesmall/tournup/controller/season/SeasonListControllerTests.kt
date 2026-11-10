@@ -92,7 +92,7 @@ class SeasonListControllerTests(
             jsonPath("$.manifest.resource", equalTo("season"))
             jsonPath("$.manifest.operation", equalTo("list"))
             jsonPath("$.manifest.layout.type", equalTo("table"))
-            jsonPath("$.manifest.layout.columns", contains("name", "fromYear", "slug"))
+            jsonPath("$.manifest.layout.columns", contains("name"))
             jsonPath("$.manifest.fields.fromYear.dataType", equalTo("integer"))
             jsonPath("$.manifest.fields.fromYear.label", equalTo("From year"))
             jsonPath("$.manifest.fields.fromYear.widget", equalTo("display"))
@@ -124,7 +124,7 @@ class SeasonListControllerTests(
         mockMvc.get(url).andExpect {
             status { isOk() }
             jsonPath("$.manifest.title", equalTo("Seasons"))
-            jsonPath("$.manifest.layout.columns", contains("name", "fromYear", "slug"))
+            jsonPath("$.manifest.layout.columns", contains("name"))
             jsonPath("$.items.length()", equalTo(0))
             jsonPath("$.pagination.page", equalTo(0))
             jsonPath("$.pagination.size", equalTo(20))

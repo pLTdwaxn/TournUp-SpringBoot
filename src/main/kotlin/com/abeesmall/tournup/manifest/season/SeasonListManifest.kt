@@ -15,7 +15,7 @@ fun seasonListManifest(tournamentId: UUID, canCreate: Boolean = false): UiManife
         title = "Seasons",
         layout = UiLayout(
             type = UiLayoutType.TABLE,
-            columns = listOf("name", "fromYear", "slug"),
+            columns = listOf("name"),
         ),
     ).copy(
         commands = if (canCreate) {

@@ -101,7 +101,7 @@ class TournamentListControllerTests(
                 jsonPath("$.manifest.layout.type", equalTo("table"))
                 jsonPath(
                     "$.manifest.layout.columns",
-                    contains("name", "participantType", "handicapMode"),
+                    contains("name"),
                 )
                 jsonPath("$.manifest.fields.name.label", equalTo("Name"))
                 jsonPath("$.manifest.fields.name.widget", equalTo("display"))
@@ -140,7 +140,7 @@ class TournamentListControllerTests(
                 status { isOk() }
                 jsonPath("$.manifest.title", equalTo("Tournaments"))
                 jsonPath("$.manifest.layout.type", equalTo("table"))
-                jsonPath("$.manifest.layout.columns.length()", equalTo(3))
+                jsonPath("$.manifest.layout.columns.length()", equalTo(1))
                 jsonPath("$.items.length()", equalTo(0))
                 jsonPath("$.pagination.page", equalTo(0))
                 jsonPath("$.pagination.size", equalTo(20))
