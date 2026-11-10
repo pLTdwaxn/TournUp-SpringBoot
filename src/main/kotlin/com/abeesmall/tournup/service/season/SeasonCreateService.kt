@@ -12,18 +12,9 @@ import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import jakarta.validation.ConstraintViolationException
 import jakarta.validation.Validator
 import java.util.UUID
-import org.hibernate.exception.ConstraintViolationException as DatabaseConstraintViolationException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-
-class SeasonTournamentNotFoundException(tournamentId: UUID) :
-    RuntimeException("Tournament not found: $tournamentId")
-
-class SeasonFieldConflictException(
-    val field: String,
-    cause: Throwable? = null,
-) : RuntimeException("A season with this $field already exists in this tournament", cause)
 
 @Service
 class SeasonCreateService(
@@ -73,21 +64,7 @@ class SeasonCreateService(
                 ),
             )
         } catch (failure: DataIntegrityViolationException) {
-            val field = generateSequence<Throwable>(failure) { it.cause }
-                .filterIsInstance<DatabaseConstraintViolationException>()
-                .mapNotNull {
-                    when (it.constraintName) {
-                        "seasons_tournament_name_unique" -> "name"
-                        "seasons_tournament_slug_unique" -> "slug"
-                        else -> null
-                    }
-                }
-                .firstOrNull()
-
-            if (field != null) {
-                throw SeasonFieldConflictException(field, failure)
-            }
-            throw failure
+            throw seasonFieldConflict(failure) ?: failure
         }
 
         return SeasonData(

@@ -151,6 +151,26 @@ class SeasonRepositoryTests {
     }
 
     @Test
+    fun `update conflict checks exclude only this season within its tournament`() {
+        val tournament = newTournament()
+        val other = newTournament()
+        val current = seasons.saveAndFlush(newSeason(tournament))
+        val sibling = seasons.saveAndFlush(
+            newSeason(tournament, name = "2026 S2", slug = "2026-s2", fromYear = 2027),
+        )
+        val unrelated = seasons.saveAndFlush(
+            newSeason(other, name = "2027 S1", slug = "2027-s1", fromYear = 2027),
+        )
+
+        assertFalse(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, current.name, current.id))
+        assertFalse(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, current.slug, current.id))
+        assertTrue(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, sibling.name, current.id))
+        assertTrue(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, sibling.slug, current.id))
+        assertFalse(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, unrelated.name, current.id))
+        assertFalse(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, unrelated.slug, current.id))
+    }
+
+    @Test
     fun `duplicate name is rejected within the same tournament`() {
         val tournament = newTournament()
         seasons.saveAndFlush(newSeason(tournament))

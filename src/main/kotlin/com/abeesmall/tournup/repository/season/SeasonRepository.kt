@@ -16,4 +16,8 @@ interface SeasonRepository : JpaRepository<Season, UUID> {
     fun existsByTournamentIdAndName(tournamentId: UUID, name: String): Boolean
 
     fun existsByTournamentIdAndSlug(tournamentId: UUID, slug: String): Boolean
+
+    fun existsByTournamentIdAndNameAndIdNot(tournamentId: UUID, name: String, id: UUID): Boolean
+
+    fun existsByTournamentIdAndSlugAndIdNot(tournamentId: UUID, slug: String, id: UUID): Boolean
 }

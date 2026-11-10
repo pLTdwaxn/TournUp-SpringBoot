@@ -1,5 +1,7 @@
 package com.abeesmall.tournup.manifest.season
 
+import com.abeesmall.tournup.ui.UiCommand
+import com.abeesmall.tournup.ui.UiCommandMethod
 import com.abeesmall.tournup.ui.UiDataType
 import com.abeesmall.tournup.ui.UiField
 import com.abeesmall.tournup.ui.UiLayout
@@ -9,7 +11,7 @@ import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiWidget
 
-fun seasonDetailManifest(title: String): UiManifest =
+fun seasonDetailManifest(title: String, editHref: String? = null): UiManifest =
     seasonReadManifest(
         id = "season-detail",
         operation = UiOperation.READ,
@@ -20,6 +22,14 @@ fun seasonDetailManifest(title: String): UiManifest =
                 UiSection("details", "Details", listOf("fromYear", "name", "slug")),
             ),
         ),
+    ).copy(
+        commands = if (editHref != null) {
+            listOf(
+                UiCommand("edit", "Edit season", UiCommandMethod.GET, editHref),
+            )
+        } else {
+            emptyList()
+        },
     )
 
 internal fun seasonReadManifest(

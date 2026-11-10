@@ -40,6 +40,16 @@ class SecurityConfiguration {
                     "/api/tournaments/{tournamentId}/seasons/create/",
                 ).hasAnyRole(*seasonWriterRoles.toTypedArray())
                 .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/seasons/{seasonId}/edit/",
+                    "/api/tournaments/{tournamentId}/seasons/{seasonId}/edit/",
+                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/seasons/{seasonId}/",
+                    "/api/tournaments/{tournamentId}/seasons/{seasonId}/",
+                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
+                .requestMatchers(
                     HttpMethod.POST,
                     "/api/tournaments/{tournamentId}/seasons/",
                 ).hasAnyRole(*seasonWriterRoles.toTypedArray())

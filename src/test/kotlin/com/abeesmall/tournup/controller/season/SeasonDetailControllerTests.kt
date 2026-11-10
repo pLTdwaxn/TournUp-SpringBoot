@@ -150,7 +150,13 @@ class SeasonDetailControllerTests(
             jsonPath("$.manifest.fields.fromYear.editable", equalTo(false))
             jsonPath("$.manifest.fields.name.editable", equalTo(false))
             jsonPath("$.manifest.fields.slug.editable", equalTo(false))
-            jsonPath("$.manifest.commands.length()", equalTo(0))
+            val canUpdate = role in setOf("SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER")
+            jsonPath("$.manifest.commands.length()", equalTo(if (canUpdate) 1 else 0))
+            if (canUpdate) {
+                jsonPath("$.manifest.commands[0].id", equalTo("edit"))
+                jsonPath("$.manifest.commands[0].method", equalTo("GET"))
+                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/${season.id}/edit/"))
+            }
             jsonPath("$.item.id", equalTo(season.id.toString()))
             jsonPath("$.item.tournamentId", equalTo(tournament.id.toString()))
             jsonPath("$.item.name", equalTo("2026 S1"))

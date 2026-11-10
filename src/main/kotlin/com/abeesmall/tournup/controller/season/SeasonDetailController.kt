@@ -4,6 +4,7 @@ import com.abeesmall.tournup.dto.audit.LastAuditValue
 import com.abeesmall.tournup.dto.season.SeasonDetailResponse
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.security.canManageSeasons
 import com.abeesmall.tournup.security.canViewLastAudit
 import com.abeesmall.tournup.service.season.SeasonDetailService
 import java.util.UUID
@@ -30,7 +31,11 @@ class SeasonDetailController(
         @PathVariable(value = "tournamentId", required = false) tournamentId: UUID?,
         authentication: Authentication,
     ): SeasonDetailResponse {
-        val response = service.find(id = seasonId, tournamentId = tournamentId)
+        val response = service.find(
+            id = seasonId,
+            tournamentId = tournamentId,
+            canUpdate = canManageSeasons(authentication),
+        )
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found")
 
         if (!canViewLastAudit(authentication)) {
