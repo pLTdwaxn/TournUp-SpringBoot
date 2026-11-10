@@ -244,4 +244,56 @@ class LayoutValidationTests {
 
         assertEquals(true, report.isValid)
     }
+
+    @Test
+    fun `accepts a number widget for a required integer form field`() {
+        val definition = LayoutDefinition(
+            title = "Create season",
+            layout = UiLayout(
+                type = UiLayoutType.FORM,
+                sections = listOf(
+                    UiSection("details", "Details", listOf("fromYear")),
+                ),
+            ),
+            fields = mapOf(
+                "fromYear" to FieldPresentation("From year", UiWidget.NUMBER),
+            ),
+        )
+
+        val report = validateLayoutDefinition(
+            definition,
+            mapOf("fromYear" to UiDataType.INTEGER),
+            requiredWithoutDefaults = setOf("fromYear"),
+        )
+
+        assertEquals(true, report.isValid)
+    }
+
+    @Test
+    fun `rejects mismatched integer and string form widgets`() {
+        val definition = LayoutDefinition(
+            title = "Create season",
+            layout = UiLayout(
+                type = UiLayoutType.FORM,
+                sections = listOf(
+                    UiSection("details", "Details", listOf("fromYear", "name")),
+                ),
+            ),
+            fields = mapOf(
+                "fromYear" to FieldPresentation("From year", UiWidget.TEXT),
+                "name" to FieldPresentation("Name", UiWidget.NUMBER),
+            ),
+        )
+
+        assertEquals(
+            setOf("fromYear", "name"),
+            incompatibleWidgetFieldIds(
+                definition,
+                mapOf(
+                    "fromYear" to UiDataType.INTEGER,
+                    "name" to UiDataType.STRING,
+                ),
+            ),
+        )
+    }
 }

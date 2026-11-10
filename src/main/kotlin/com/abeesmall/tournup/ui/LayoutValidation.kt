@@ -37,6 +37,9 @@ fun incompatibleWidgetFieldIds(
 
                     UiDataType.ENUM ->
                         presentation.widget != UiWidget.SELECT
+
+                    UiDataType.INTEGER ->
+                        presentation.widget != UiWidget.NUMBER
                 }
 
                 UiLayoutType.TABLE, UiLayoutType.DETAIL ->

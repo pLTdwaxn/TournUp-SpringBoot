@@ -77,6 +77,7 @@ enum class UiDataType(
 ) {
     STRING("string"),
     ENUM("enum"),
+    INTEGER("integer"),
 }
 
 enum class UiWidget(
@@ -85,13 +86,15 @@ enum class UiWidget(
     TEXT("text"),
     TEXTAREA("textarea"),
     SELECT("select"),
-    DISPLAY("display")
+    DISPLAY("display"),
+    NUMBER("number"),
 }
 
 enum class UiBehaviourType(
     @get:JsonValue val wireValue: String,
 ) {
     SLUGIFY("slugify"),
+    SEASON_NAME_FROM_YEAR("season-name-from-year"),
 }
 
 enum class UiCommandMethod(

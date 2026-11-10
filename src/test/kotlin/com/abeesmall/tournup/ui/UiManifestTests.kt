@@ -38,4 +38,20 @@ class UiManifestTests {
         assertEquals("\"list\"", mapper.writeValueAsString(UiOperation.LIST))
         assertEquals("\"display\"", mapper.writeValueAsString(UiWidget.DISPLAY))
     }
+
+    @Test
+    fun `season form enums use agreed wire values`() {
+        assertEquals(
+            "\"integer\"",
+            mapper.writeValueAsString(UiDataType.INTEGER),
+        )
+        assertEquals(
+            "\"number\"",
+            mapper.writeValueAsString(UiWidget.NUMBER),
+        )
+        assertEquals(
+            "\"season-name-from-year\"",
+            mapper.writeValueAsString(UiBehaviourType.SEASON_NAME_FROM_YEAR),
+        )
+    }
 }

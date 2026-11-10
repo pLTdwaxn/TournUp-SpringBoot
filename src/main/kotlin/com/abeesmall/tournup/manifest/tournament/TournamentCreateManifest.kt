@@ -51,6 +51,7 @@ fun tournamentCreateManifest(): UiManifest {
                         else UiWidget.TEXT
 
                     UiDataType.ENUM -> UiWidget.SELECT
+                    UiDataType.INTEGER -> UiWidget.NUMBER
                 },
                 required = definition.required,
                 editable = true,
