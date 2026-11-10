@@ -37,6 +37,14 @@ class SecurityConfiguration {
                 ).permitAll()
                 .requestMatchers(
                     HttpMethod.GET,
+                    "/api/tournaments/{tournamentId}/seasons/create/",
+                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/tournaments/{tournamentId}/seasons/",
+                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
+                .requestMatchers(
+                    HttpMethod.GET,
                     "/api/tournaments/create/",
                 ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
                 .requestMatchers(

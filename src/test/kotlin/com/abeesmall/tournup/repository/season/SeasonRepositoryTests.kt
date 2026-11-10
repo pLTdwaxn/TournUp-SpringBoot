@@ -9,6 +9,7 @@ import jakarta.persistence.EntityManager
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -94,6 +95,30 @@ class SeasonRepositoryTests {
             second.id,
             seasons.findByTournamentIdAndSlug(secondTournament.id, "2026-s1")?.id,
         )
+    }
+
+    @Test
+    fun `creation queries include only the requested tournament`() {
+        val tournament = newTournament()
+        val other = newTournament()
+        val later = seasons.saveAndFlush(newSeason(tournament, fromYear = 2027))
+        val earlier = seasons.saveAndFlush(
+            newSeason(tournament, name = "2026 S2", slug = "2026-s2"),
+        )
+        seasons.saveAndFlush(newSeason(other, name = "Other season", slug = "other-season"))
+        entityManager.clear()
+
+        assertEquals(
+            listOf(earlier.id, later.id),
+            seasons.findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id)
+                .map { it.id },
+        )
+        assertTrue(seasons.existsByTournamentIdAndName(tournament.id, earlier.name))
+        assertTrue(seasons.existsByTournamentIdAndSlug(tournament.id, earlier.slug))
+        assertFalse(seasons.existsByTournamentIdAndName(tournament.id, "Other season"))
+        assertFalse(seasons.existsByTournamentIdAndSlug(tournament.id, "other-season"))
+        assertFalse(seasons.existsByTournamentIdAndName(other.id, earlier.name))
+        assertFalse(seasons.existsByTournamentIdAndSlug(other.id, earlier.slug))
     }
 
     @Test

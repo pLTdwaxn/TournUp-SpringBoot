@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import tools.jackson.databind.annotation.JsonDeserialize
 
 const val SEASON_NAME_MAX_LENGTH = 255
 const val SEASON_SLUG_MAX_LENGTH = 255
@@ -29,5 +30,6 @@ data class SeasonCreateRequest(
     val slug: String,
 
     @field:NotNull(message = "From year is required")
+    @field:JsonDeserialize(using = SeasonYearDeserializer::class)
     val fromYear: Int?,
 )
