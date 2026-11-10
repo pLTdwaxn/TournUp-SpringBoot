@@ -22,7 +22,7 @@ class SeasonCreateManifestTests {
         )
 
         assertEquals(1, json.path("contractVersion").intValue())
-        assertEquals("tournup-web", json.path("application").stringValue())
+        assertEquals("tournament-manager", json.path("application").stringValue())
         assertEquals("season", json.path("resource").stringValue())
         assertEquals("create", json.path("operation").stringValue())
         assertEquals("form", json.path("layout").path("type").stringValue())

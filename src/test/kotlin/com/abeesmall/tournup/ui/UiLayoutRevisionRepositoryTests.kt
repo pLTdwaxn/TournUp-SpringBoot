@@ -27,7 +27,7 @@ class UiLayoutRevisionRepositoryTests {
     fun `round trips a layout definition through jsonb`() {
         val layout = layouts.saveAndFlush(
             UiLayoutRecord(
-                application = "tournup-web",
+                application = "tournament-manager",
                 resource = "tournament",
                 operation = "create",
             ),

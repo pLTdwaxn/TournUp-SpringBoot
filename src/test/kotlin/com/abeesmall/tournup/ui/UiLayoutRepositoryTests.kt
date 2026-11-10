@@ -24,7 +24,7 @@ class UiLayoutRepositoryTests {
     fun `finds a layout by application resource and operation`() {
         val saved = repository.saveAndFlush(
             UiLayoutRecord(
-                application = "tournup-web",
+                application = "tournament-manager",
                 resource = "tournament",
                 operation = "create",
             ),
@@ -33,7 +33,7 @@ class UiLayoutRepositoryTests {
 
         val found = assertNotNull(
             repository.findByApplicationAndResourceAndOperation(
-                "tournup-web",
+                "tournament-manager",
                 "tournament",
                 "create",
             ),

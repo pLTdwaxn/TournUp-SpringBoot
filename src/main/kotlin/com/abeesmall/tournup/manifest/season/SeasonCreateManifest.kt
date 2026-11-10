@@ -4,6 +4,7 @@ import com.abeesmall.tournup.dto.season.SEASON_NAME_MAX_LENGTH
 import com.abeesmall.tournup.dto.season.SEASON_SLUG_MAX_LENGTH
 import com.abeesmall.tournup.dto.season.SEASON_SLUG_PATTERN
 import com.abeesmall.tournup.ui.UiBehaviour
+import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiBehaviourType
 import com.abeesmall.tournup.ui.UiCommand
 import com.abeesmall.tournup.ui.UiCommandMethod
@@ -21,7 +22,7 @@ fun seasonCreateManifest(tournamentId: UUID): UiManifest =
     UiManifest(
         contractVersion = 1,
         id = "season-create",
-        application = "tournup-web",
+        application = UiApplication.TOURNAMENT_MANAGER.id,
         resource = "season",
         operation = UiOperation.CREATE,
         title = "Create season",

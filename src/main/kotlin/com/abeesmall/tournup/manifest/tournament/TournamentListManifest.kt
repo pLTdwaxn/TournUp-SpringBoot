@@ -1,6 +1,7 @@
 package com.abeesmall.tournup.manifest.tournament
 
 import com.abeesmall.tournup.ui.UiCommand
+import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiCommandMethod
 import com.abeesmall.tournup.ui.UiDataType
 import com.abeesmall.tournup.ui.UiField
@@ -11,7 +12,10 @@ import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiOption
 import com.abeesmall.tournup.ui.UiWidget
 
-fun tournamentListManifest(canCreate: Boolean = false): UiManifest =
+fun tournamentListManifest(
+    application: UiApplication,
+    canCreate: Boolean = false,
+): UiManifest =
     tournamentManifest(
         id = "tournament-list",
         operation = UiOperation.LIST,
@@ -21,6 +25,7 @@ fun tournamentListManifest(canCreate: Boolean = false): UiManifest =
             columns = listOf("name"),
         ),
     ).copy(
+        application = application.id,
         commands = if (canCreate) {
             listOf(
                 UiCommand(
@@ -44,7 +49,7 @@ internal fun tournamentManifest(
     UiManifest(
         contractVersion = 1,
         id = id,
-        application = "tournup-web",
+        application = UiApplication.TOURNAMENT_MANAGER.id,
         resource = "tournament",
         operation = operation,
         title = title,

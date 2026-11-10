@@ -8,11 +8,15 @@ import com.abeesmall.tournup.security.canManageTournaments
 import com.abeesmall.tournup.security.canViewLastAudit
 
 import com.abeesmall.tournup.service.tournament.TournamentListService
+import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
+import com.abeesmall.tournup.ui.UiApplication
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
@@ -26,8 +30,11 @@ class TournamentListController(
     fun list(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
+        @RequestHeader(name = UI_APPLICATION_HEADER) application: String,
         authentication: Authentication,
+        servletResponse: HttpServletResponse,
     ): TournamentListResponse {
+        servletResponse.addHeader("Vary", UI_APPLICATION_HEADER)
         if (page < 0) {
             throw ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
@@ -41,9 +48,15 @@ class TournamentListController(
             )
         }
 
+        val selectedApplication = UiApplication.fromHeader(application)
+            ?: throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Unknown $UI_APPLICATION_HEADER value",
+            )
         val response = service.list(
             PageRequest.of(page, size, Sort.by("name", "id")),
             canCreate = canManageTournaments(authentication),
+            application = selectedApplication,
         )
 
         if (!canViewLastAudit(authentication)) {

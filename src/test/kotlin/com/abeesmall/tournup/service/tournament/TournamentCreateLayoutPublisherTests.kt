@@ -48,7 +48,7 @@ class TournamentCreateLayoutPublisherTests {
     fun `publishes a valid revision`() {
         val layout = layouts.saveAndFlush(
             UiLayoutRecord(
-                application = "tournup-web",
+                application = "tournament-manager",
                 resource = "tournament",
                 operation = UiOperation.CREATE.wireValue
             ),
@@ -80,7 +80,7 @@ class TournamentCreateLayoutPublisherTests {
         assertEquals(1, reloaded.publishedRevision)
 
         val published = assertNotNull(
-            reader.find("tournup-web", "tournament", UiOperation.CREATE.wireValue),
+            reader.find("tournament-manager", "tournament", UiOperation.CREATE.wireValue),
         )
         assertEquals(layout.id, published.layoutId)
         assertEquals(1, published.revision)
@@ -92,7 +92,7 @@ class TournamentCreateLayoutPublisherTests {
     fun `rejects an invalid revision without publishing it`() {
         val layout = layouts.saveAndFlush(
             UiLayoutRecord(
-                application = "tournup-web",
+                application = "tournament-manager",
                 resource = "tournament",
                 operation = UiOperation.CREATE.wireValue,
             ),
@@ -127,14 +127,14 @@ class TournamentCreateLayoutPublisherTests {
     fun `returns no published layout before publication`() {
         layouts.saveAndFlush(
             UiLayoutRecord(
-                application = "tournup-web",
+                application = "tournament-manager",
                 resource = "tournament",
                 operation = UiOperation.CREATE.wireValue,
             ),
         )
 
         assertNull(
-            reader.find("tournup-web", "tournament", UiOperation.CREATE.wireValue),
+            reader.find("tournament-manager", "tournament", UiOperation.CREATE.wireValue),
         )
         assertNull(
             reader.find("unknown-app", "tournament", UiOperation.CREATE.wireValue),
@@ -145,7 +145,7 @@ class TournamentCreateLayoutPublisherTests {
     fun `rejects a table layout for tournament creation`() {
         val layout = layouts.saveAndFlush(
             UiLayoutRecord(
-                application = "tournup-web",
+                application = "tournament-manager",
                 resource = "tournament",
                 operation = UiOperation.CREATE.wireValue,
             ),

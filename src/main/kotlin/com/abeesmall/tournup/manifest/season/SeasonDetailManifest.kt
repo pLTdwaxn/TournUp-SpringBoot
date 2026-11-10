@@ -1,6 +1,7 @@
 package com.abeesmall.tournup.manifest.season
 
 import com.abeesmall.tournup.ui.UiCommand
+import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiCommandMethod
 import com.abeesmall.tournup.ui.UiDataType
 import com.abeesmall.tournup.ui.UiField
@@ -41,7 +42,7 @@ internal fun seasonReadManifest(
     UiManifest(
         contractVersion = 1,
         id = id,
-        application = "tournup-web",
+        application = UiApplication.TOURNAMENT_MANAGER.id,
         resource = "season",
         operation = operation,
         title = title,
