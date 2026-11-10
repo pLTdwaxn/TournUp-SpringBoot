@@ -15,9 +15,12 @@ class SeasonDetailService(
     private val seasons: SeasonRepository,
 ) {
     @Transactional(readOnly = true)
-    fun find(id: UUID): SeasonDetailResponse? {
+    fun find(id: UUID, tournamentId: UUID? = null): SeasonDetailResponse? {
         val season = seasons.findById(id).orElse(null) ?: return null
         val tournament = season.tournament
+        if (tournamentId != null && tournament.id != tournamentId) {
+            return null
+        }
 
         return SeasonDetailResponse(
             manifest = seasonDetailManifest(season.name),

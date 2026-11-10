@@ -19,12 +19,18 @@ class SeasonDetailController(
     private val service: SeasonDetailService,
     private val auditReader: LatestAuditReader,
 ) {
-    @GetMapping("/api/seasons/{seasonId}/")
+    @GetMapping(
+        value = [
+            "/api/seasons/{seasonId}/",
+            "/api/tournaments/{tournamentId}/seasons/{seasonId}/",
+        ],
+    )
     fun detail(
         @PathVariable("seasonId") seasonId: UUID,
+        @PathVariable(value = "tournamentId", required = false) tournamentId: UUID?,
         authentication: Authentication,
     ): SeasonDetailResponse {
-        val response = service.find(seasonId)
+        val response = service.find(id = seasonId, tournamentId = tournamentId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Season not found")
 
         if (!canViewLastAudit(authentication)) {

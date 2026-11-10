@@ -10,12 +10,14 @@ import com.abeesmall.tournup.service.season.SeasonDetailService
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import kotlin.test.assertEquals
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.`when` as whenever
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -47,10 +49,12 @@ class SeasonDetailControllerTests(
         fromYear = 2026,
     )
     private val url = "/api/seasons/${season.id}/"
+    private val nestedUrl = "/api/tournaments/${tournament.id}/seasons/${season.id}/"
 
     @Test
     fun `requires authentication before looking up the season`() {
         mockMvc.get(url).andExpect { status { isUnauthorized() } }
+        mockMvc.get(nestedUrl).andExpect { status { isUnauthorized() } }
         verifyNoInteractions(seasons, auditReader)
     }
 
@@ -58,6 +62,10 @@ class SeasonDetailControllerTests(
     @WithMockUser(roles = ["PLAYER"])
     fun `malformed ID is rejected before looking up the season`() {
         mockMvc.get("/api/seasons/not-a-uuid/").andExpect { status { isBadRequest() } }
+        mockMvc.get("/api/tournaments/not-a-uuid/seasons/${season.id}/")
+            .andExpect { status { isBadRequest() } }
+        mockMvc.get("/api/tournaments/${tournament.id}/seasons/not-a-uuid/")
+            .andExpect { status { isBadRequest() } }
         verifyNoInteractions(seasons, auditReader)
     }
 
@@ -67,6 +75,54 @@ class SeasonDetailControllerTests(
         whenever(seasons.findById(season.id)).thenReturn(Optional.empty())
 
         mockMvc.get(url).andExpect { status { isNotFound() } }
+        mockMvc.get(nestedUrl).andExpect { status { isNotFound() } }
+
+        verify(seasons, times(2)).findById(season.id)
+        verifyNoMoreInteractions(seasons)
+        verifyNoInteractions(auditReader)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER", "PLAYER", "COACH"])
+    fun `nested alias returns the same response and audit visibility as the shallow route`(role: String) {
+        whenever(seasons.findById(season.id)).thenReturn(Optional.of(season))
+        val canViewAudit = role in setOf("SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER")
+        if (canViewAudit) {
+            whenever(auditReader.findLatest(Season::class.java, listOf(season.id))).thenReturn(
+                mapOf(
+                    season.id to LastAuditData(
+                        42, Instant.parse("2026-11-10T00:00:00Z"), UUID.randomUUID(),
+                    ),
+                ),
+            )
+        }
+
+        val shallow = mockMvc.get(url) {
+            with(user("viewer").roles(role))
+        }.andExpect { status { isOk() } }.andReturn()
+        val nested = mockMvc.get(nestedUrl) {
+            with(user("viewer").roles(role))
+        }.andExpect { status { isOk() } }.andReturn()
+
+        assertEquals(shallow.response.contentAsString, nested.response.contentAsString)
+        verify(seasons, times(2)).findById(season.id)
+        verifyNoMoreInteractions(seasons)
+        if (canViewAudit) {
+            verify(auditReader, times(2)).findLatest(Season::class.java, listOf(season.id))
+            verifyNoMoreInteractions(auditReader)
+        } else {
+            verifyNoInteractions(auditReader)
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER", "PLAYER", "COACH"])
+    fun `a season under a different tournament returns not found before an audit lookup`(role: String) {
+        whenever(seasons.findById(season.id)).thenReturn(Optional.of(season))
+
+        mockMvc.get("/api/tournaments/${UUID.randomUUID()}/seasons/${season.id}/") {
+            with(user("viewer").roles(role))
+        }.andExpect { status { isNotFound() } }
 
         verify(seasons).findById(season.id)
         verifyNoMoreInteractions(seasons)
