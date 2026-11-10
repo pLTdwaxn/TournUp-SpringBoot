@@ -21,6 +21,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Propagation
@@ -119,6 +121,33 @@ class SeasonRepositoryTests {
         assertFalse(seasons.existsByTournamentIdAndSlug(tournament.id, "other-season"))
         assertFalse(seasons.existsByTournamentIdAndName(other.id, earlier.name))
         assertFalse(seasons.existsByTournamentIdAndSlug(other.id, earlier.slug))
+    }
+
+    @Test
+    fun `pagination and totals are scoped to the requested tournament`() {
+        val tournament = newTournament()
+        val other = newTournament()
+        val earlier = seasons.saveAndFlush(newSeason(tournament))
+        val later = seasons.saveAndFlush(
+            newSeason(tournament, name = "2027 S1", slug = "2027-s1", fromYear = 2027),
+        )
+        seasons.saveAndFlush(newSeason(other, fromYear = 2028))
+        entityManager.clear()
+        val sort = Sort.by(
+            Sort.Order.desc("fromYear"), Sort.Order.asc("name"), Sort.Order.asc("id"),
+        )
+
+        val firstPage = seasons.findAllByTournamentId(tournament.id, PageRequest.of(0, 1, sort))
+        val secondPage = seasons.findAllByTournamentId(tournament.id, PageRequest.of(1, 1, sort))
+
+        assertEquals(listOf(later.id), firstPage.content.map { it.id })
+        assertEquals(listOf(earlier.id), secondPage.content.map { it.id })
+        assertEquals(2L, firstPage.totalElements)
+        assertEquals(2L, secondPage.totalElements)
+        assertEquals(2, firstPage.totalPages)
+        val missing = seasons.findAllByTournamentId(UUID.randomUUID(), PageRequest.of(0, 1, sort))
+        assertTrue(missing.isEmpty)
+        assertEquals(0L, missing.totalElements)
     }
 
     @Test

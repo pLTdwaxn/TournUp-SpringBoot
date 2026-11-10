@@ -10,11 +10,8 @@ import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiWidget
 
 fun seasonDetailManifest(title: String): UiManifest =
-    UiManifest(
-        contractVersion = 1,
+    seasonReadManifest(
         id = "season-detail",
-        application = "tournup-web",
-        resource = "season",
         operation = UiOperation.READ,
         title = title,
         layout = UiLayout(
@@ -23,6 +20,22 @@ fun seasonDetailManifest(title: String): UiManifest =
                 UiSection("details", "Details", listOf("fromYear", "name", "slug")),
             ),
         ),
+    )
+
+internal fun seasonReadManifest(
+    id: String,
+    operation: UiOperation,
+    title: String,
+    layout: UiLayout,
+): UiManifest =
+    UiManifest(
+        contractVersion = 1,
+        id = id,
+        application = "tournup-web",
+        resource = "season",
+        operation = operation,
+        title = title,
+        layout = layout,
         fields = mapOf(
             "fromYear" to UiField(
                 label = "From year",
