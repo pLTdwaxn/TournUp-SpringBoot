@@ -22,7 +22,8 @@ class SeasonDetailController(
     @GetMapping(
         value = [
             "/api/seasons/{identifier}/",
-            "/api/tournaments/{tournamentIdentifier}/seasons/{identifier}/",
+            // The retired nested create URL must not be interpreted as a Season slug.
+            "/api/tournaments/{tournamentIdentifier}/seasons/{identifier:(?!create$).+}/",
         ],
     )
     fun detail(

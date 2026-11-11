@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.service.season
 
-import com.abeesmall.tournup.dto.season.SeasonCreateContext
+import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
 import com.abeesmall.tournup.dto.season.SeasonCreateRequest
 import com.abeesmall.tournup.dto.season.SeasonDetailResponse
@@ -9,6 +9,7 @@ import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.ui.UiApplication
 import jakarta.validation.ConstraintViolationException
 import jakarta.validation.Validator
 import java.util.UUID
@@ -23,29 +24,41 @@ class SeasonCreateService(
     private val validator: Validator,
 ) {
     @Transactional(readOnly = true)
-    fun form(tournamentId: UUID): SeasonCreateFormResponse {
+    fun form(application: UiApplication, tournamentId: UUID?): SeasonCreateFormResponse {
+        val manifest = seasonCreateManifest(application)
+        if (tournamentId == null) return SeasonCreateFormResponse(manifest)
+        val tournament = requireTournament(tournamentId)
+        return SeasonCreateFormResponse(
+            manifest = manifest,
+            item = SeasonCreateRequest("", "", null, tournament.id),
+            included = mapOf(
+                "tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name)),
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun namingContext(tournamentId: UUID): SeasonNamingContext {
         requireTournament(tournamentId)
         val existing = seasons.findAllByTournamentIdOrderByFromYearAscNameAsc(tournamentId)
 
-        return SeasonCreateFormResponse(
-            manifest = seasonCreateManifest(tournamentId),
-            context = SeasonCreateContext(
-                tournamentId = tournamentId,
-                existingNamesByYear = existing.groupBy(
-                    keySelector = { it.fromYear },
-                    valueTransform = { it.name },
-                ),
+        return SeasonNamingContext(
+            tournamentId = tournamentId,
+            existingNamesByYear = existing.groupBy(
+                keySelector = { it.fromYear },
+                valueTransform = { it.name },
             ),
         )
     }
 
     @Transactional
-    fun create(tournamentId: UUID, request: SeasonCreateRequest): SeasonDetailResponse {
+    fun create(request: SeasonCreateRequest): SeasonDetailResponse {
         val violations = validator.validate(request)
         if (violations.isNotEmpty()) {
             throw ConstraintViolationException(violations)
         }
 
+        val tournamentId = requireNotNull(request.tournamentId)
         val tournament = requireTournament(tournamentId)
         if (seasons.existsByTournamentIdAndName(tournamentId, request.name)) {
             throw SeasonFieldConflictException("name")

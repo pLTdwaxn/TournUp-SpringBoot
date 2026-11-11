@@ -52,11 +52,12 @@ fun tournamentCreateManifest(): UiManifest {
 
                     UiDataType.ENUM -> UiWidget.SELECT
                     UiDataType.INTEGER -> UiWidget.NUMBER
+                    UiDataType.REFERENCE -> UiWidget.RECORD_SELECT
                 },
                 required = definition.required,
                 editable = true,
                 behaviours = if (fieldId == "slug") {
-                    listOf(UiBehaviour(UiBehaviourType.SLUGIFY, "name"))
+                    listOf(UiBehaviour(UiBehaviourType.SLUGIFY, listOf("name")))
                 } else {
                     emptyList()
                 },

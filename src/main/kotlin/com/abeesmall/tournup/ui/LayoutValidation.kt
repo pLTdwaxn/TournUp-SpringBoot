@@ -40,6 +40,9 @@ fun incompatibleWidgetFieldIds(
 
                     UiDataType.INTEGER ->
                         presentation.widget != UiWidget.NUMBER
+
+                    UiDataType.REFERENCE ->
+                        presentation.widget != UiWidget.RECORD_SELECT
                 }
 
                 UiLayoutType.TABLE, UiLayoutType.DETAIL ->

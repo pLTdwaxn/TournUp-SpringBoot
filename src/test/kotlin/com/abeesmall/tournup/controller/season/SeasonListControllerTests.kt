@@ -25,11 +25,14 @@ import org.springframework.context.annotation.Import
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 
 @WebMvcTest(SeasonListController::class)
 @Import(SecurityConfiguration::class, SeasonListService::class)
@@ -50,6 +53,17 @@ class SeasonListControllerTests(
     private val sort = Sort.by(
         Sort.Order.desc("fromYear"), Sort.Order.asc("name"), Sort.Order.asc("id"),
     )
+
+    @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `nested collection supports listing but rejects creation`() {
+        mockMvc.post(url) {
+            with(csrf())
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"tournamentId":"${tournament.id}","name":"2026 S1","slug":"2026-s1","fromYear":2026}"""
+        }.andExpect { status { isMethodNotAllowed() } }
+        verifyNoInteractions(tournaments, seasons, auditReader)
+    }
 
     @Test
     fun `requires authentication`() {
@@ -165,7 +179,7 @@ class SeasonListControllerTests(
             if (canCreate) {
                 jsonPath("$.manifest.commands[0].id", equalTo("create"))
                 jsonPath("$.manifest.commands[0].method", equalTo("GET"))
-                jsonPath("$.manifest.commands[0].href", equalTo("${url}create/"))
+                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/?tournamentId=${tournament.id}"))
             }
         }
     }
@@ -216,6 +230,7 @@ class SeasonListControllerTests(
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER", "PLAYER", "COACH"])
     fun `listing without a tournament includes records from different tournaments`(role: String) {
+        val canCreate = role in setOf("SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER")
         val first = season("2026 S1", "2026-s1", 2026)
         val otherTournament = Tournament(slug = "summer-open", name = "Summer Open")
         val second = Season(
@@ -231,7 +246,10 @@ class SeasonListControllerTests(
             jsonPath("$.manifest.resource", equalTo("season"))
             jsonPath("$.manifest.operation", equalTo("list"))
             jsonPath("$.manifest.layout.columns", contains("name"))
-            jsonPath("$.manifest.commands.length()", equalTo(0))
+            jsonPath("$.manifest.commands.length()", equalTo(if (canCreate) 1 else 0))
+            if (canCreate) {
+                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/"))
+            }
             jsonPath("$.items.length()", equalTo(2))
             jsonPath("$.items[0].id", equalTo(first.id.toString()))
             jsonPath("$.items[0].tournamentId", equalTo(tournament.id.toString()))
@@ -283,7 +301,8 @@ class SeasonListControllerTests(
         mockMvc.get("/api/seasons/").andExpect {
             status { isOk() }
             jsonPath("$.manifest.title", equalTo("Seasons"))
-            jsonPath("$.manifest.commands.length()", equalTo(0))
+            jsonPath("$.manifest.commands.length()", equalTo(1))
+            jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/"))
             jsonPath("$.items.length()", equalTo(0))
             jsonPath("$.pagination.totalElements", equalTo(0))
         }

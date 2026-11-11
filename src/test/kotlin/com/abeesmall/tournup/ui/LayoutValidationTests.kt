@@ -6,6 +6,32 @@ import kotlin.test.assertEquals
 
 class LayoutValidationTests {
     @Test
+    fun `reference form fields require a record select widget`() {
+        val definition = LayoutDefinition(
+            title = "Create season",
+            layout = UiLayout(
+                type = UiLayoutType.FORM,
+                sections = listOf(UiSection("details", "Details", listOf("tournamentId"))),
+            ),
+            fields = mapOf("tournamentId" to FieldPresentation("Tournament", UiWidget.RECORD_SELECT)),
+        )
+        val types = mapOf("tournamentId" to UiDataType.REFERENCE)
+
+        assertEquals(true, validateLayoutDefinition(definition, types, setOf("tournamentId")).isValid)
+        assertEquals(
+            setOf("tournamentId"),
+            incompatibleWidgetFieldIds(
+                definition.copy(fields = mapOf("tournamentId" to FieldPresentation("Tournament", UiWidget.TEXT))),
+                types,
+            ),
+        )
+        assertEquals(
+            setOf("tournamentId"),
+            incompatibleWidgetFieldIds(definition, mapOf("tournamentId" to UiDataType.STRING)),
+        )
+    }
+
+    @Test
     fun `reports fields absent from the catalogue`() {
         val definition = LayoutDefinition(
             title = "Create tournament",

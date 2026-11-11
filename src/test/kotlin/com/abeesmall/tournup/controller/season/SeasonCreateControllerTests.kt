@@ -1,7 +1,7 @@
 package com.abeesmall.tournup.controller.season
 
 import com.abeesmall.tournup.dto.audit.LastAuditData
-import com.abeesmall.tournup.dto.season.SeasonCreateContext
+import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
 import com.abeesmall.tournup.dto.season.SeasonCreateRequest
 import com.abeesmall.tournup.dto.season.SeasonData
@@ -13,6 +13,8 @@ import com.abeesmall.tournup.manifest.season.seasonDetailManifest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
+import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
 import com.abeesmall.tournup.service.season.SeasonCreateService
 import com.abeesmall.tournup.service.season.SeasonFieldConflictException
 import com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException
@@ -52,9 +54,11 @@ class SeasonCreateControllerTests(
     private lateinit var auditReader: LatestAuditReader
 
     private val tournamentId = UUID.randomUUID()
-    private val formUrl = "/api/tournaments/$tournamentId/seasons/create/"
-    private val createUrl = "/api/tournaments/$tournamentId/seasons/"
-    private val request = SeasonCreateRequest("2026 S4", "2026-s4", 2026)
+    private val formUrl = "/api/seasons/create/"
+    private val prefilledUrl = "$formUrl?tournamentId=$tournamentId"
+    private val createUrl = "/api/seasons/"
+    private val namingUrl = "/api/seasons/naming-context/?tournamentId=$tournamentId"
+    private val request = SeasonCreateRequest("2026 S4", "2026-s4", 2026, tournamentId)
     private val created = SeasonData(UUID.randomUUID(), tournamentId, "2026 S4", "2026-s4", 2026)
     private val createdResponse = SeasonDetailResponse(
         manifest = seasonDetailManifest(created.name, editHref = "/api/seasons/${created.id}/edit/"),
@@ -67,19 +71,20 @@ class SeasonCreateControllerTests(
 
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
-    fun `writers receive the parent scoped form and naming context`(role: String) {
-        whenever(service.form(tournamentId)).thenReturn(
+    fun `writers receive a prefilled editable reference with the same lookup contract`(role: String) {
+        whenever(service.form(UiApplication.TOURNAMENT_MANAGER, tournamentId)).thenReturn(
             SeasonCreateFormResponse(
-                manifest = seasonCreateManifest(tournamentId),
-                context = SeasonCreateContext(
-                    tournamentId,
-                    mapOf(2026 to listOf("2026 S1", "2026 S3")),
+                manifest = seasonCreateManifest(UiApplication.TOURNAMENT_MANAGER),
+                item = SeasonCreateRequest("", "", null, tournamentId),
+                included = mapOf(
+                    "tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open")),
                 ),
             ),
         )
 
-        mockMvc.get(formUrl) {
+        mockMvc.get(prefilledUrl) {
             with(user("writer").roles(role))
+            header(UI_APPLICATION_HEADER, "tournament-manager")
         }.andExpect {
             status { isOk() }
             jsonPath("$.manifest.operation", equalTo("create"))
@@ -88,8 +93,15 @@ class SeasonCreateControllerTests(
             jsonPath("$.manifest.fields.name.behaviours[0].type", equalTo("season-name-from-year"))
             jsonPath("$.manifest.fields.slug.behaviours[0].type", equalTo("slugify"))
             jsonPath("$.manifest.commands[0].href", equalTo(createUrl))
-            jsonPath("$.context.tournamentId", equalTo(tournamentId.toString()))
-            jsonPath("$.context.existingNamesByYear['2026']", contains("2026 S1", "2026 S3"))
+            jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
+            jsonPath("$.manifest.fields.tournamentId.widget", equalTo("record-select"))
+            jsonPath("$.manifest.fields.tournamentId.editable", equalTo(true))
+            jsonPath("$.manifest.fields.tournamentId.reference.resource", equalTo("tournament"))
+            jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("list"))
+            jsonPath("$.manifest.fields.tournamentId.reference.resolveOperation", equalTo("read"))
+            jsonPath("$.item.tournamentId", equalTo(tournamentId.toString()))
+            jsonPath("$.included.tournament[0].id", equalTo(tournamentId.toString()))
+            jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
             jsonPath("$.item.name", equalTo(""))
             jsonPath("$.item.slug", equalTo(""))
             jsonPath("$.item.fromYear") { hasJsonPath(); value(null) }
@@ -101,7 +113,7 @@ class SeasonCreateControllerTests(
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers create a season and receive its read manifest and committed audit`(role: String) {
         val actorId = UUID.randomUUID()
-        whenever(service.create(tournamentId, request)).thenReturn(createdResponse)
+        whenever(service.create(request)).thenReturn(createdResponse)
         whenever(auditReader.findLatest(Season::class.java, listOf(created.id))).thenReturn(
             mapOf(created.id to LastAuditData(42, Instant.parse("2026-11-10T00:00:00Z"), actorId)),
         )
@@ -130,21 +142,21 @@ class SeasonCreateControllerTests(
             jsonPath("$.item.fromYear", equalTo(2026))
             jsonPath("$.context.tournament.id", equalTo(tournamentId.toString()))
             jsonPath("$.context.tournament.name", equalTo("Winter Open"))
-            jsonPath("$.context.collectionHref", equalTo(createUrl))
+            jsonPath("$.context.collectionHref", equalTo("/api/tournaments/$tournamentId/seasons/"))
             jsonPath("$.item.lastAudit.revision", equalTo(42))
             jsonPath("$.item.lastAudit.timestamp", equalTo("2026-11-10T00:00:00Z"))
             jsonPath("$.item.lastAudit.actorId", equalTo(actorId.toString()))
         }
 
         val ordered = inOrder(service, auditReader)
-        ordered.verify(service).create(tournamentId, request)
+        ordered.verify(service).create(request)
         ordered.verify(auditReader).findLatest(Season::class.java, listOf(created.id))
         ordered.verifyNoMoreInteractions()
     }
 
     @Test
     fun `missing audit history is explicitly null`() {
-        whenever(service.create(tournamentId, request)).thenReturn(createdResponse)
+        whenever(service.create(request)).thenReturn(createdResponse)
         whenever(auditReader.findLatest(Season::class.java, listOf(created.id))).thenReturn(emptyMap())
 
         mockMvc.post(createUrl) {
@@ -160,8 +172,12 @@ class SeasonCreateControllerTests(
 
     @ParameterizedTest
     @ValueSource(strings = ["PLAYER", "COACH"])
-    fun `read only roles cannot open the form or create a season`(role: String) {
+    fun `read only roles cannot open the form fetch naming context or create a season`(role: String) {
         mockMvc.get(formUrl) {
+            with(user("reader").roles(role))
+            header(UI_APPLICATION_HEADER, "tournament-manager")
+        }.andExpect { status { isForbidden() } }
+        mockMvc.get(namingUrl) {
             with(user("reader").roles(role))
         }.andExpect { status { isForbidden() } }
         mockMvc.post(createUrl) {
@@ -175,8 +191,9 @@ class SeasonCreateControllerTests(
     }
 
     @Test
-    fun `both endpoints require authentication`() {
+    fun `all creation endpoints require authentication`() {
         mockMvc.get(formUrl).andExpect { status { isUnauthorized() } }
+        mockMvc.get(namingUrl).andExpect { status { isUnauthorized() } }
         mockMvc.post(createUrl) {
             with(csrf())
             contentType = MediaType.APPLICATION_JSON
@@ -206,6 +223,7 @@ class SeasonCreateControllerTests(
             "slug" to request.copy(slug = "Invalid_Slug"),
             "slug" to request.copy(slug = "x".repeat(256)),
             "fromYear" to request.copy(fromYear = null),
+            "tournamentId" to request.copy(tournamentId = null),
         )
         for ((field, invalid) in cases) {
             mockMvc.post(createUrl) {
@@ -226,12 +244,13 @@ class SeasonCreateControllerTests(
     @ValueSource(
         strings = [
             "", "not-json", "{}",
-            """{"name":null,"slug":"2026-s4","fromYear":2026}""",
-            """{"name":"2026 S4","slug":"2026-s4"}""",
-            """{"name":"2026 S4","slug":"2026-s4","fromYear":2026.5}""",
-            """{"name":"2026 S4","slug":"2026-s4","fromYear":"2026"}""",
-            """{"name":"2026 S4","slug":"2026-s4","fromYear":true}""",
-            """{"name":"2026 S4","slug":"2026-s4","fromYear":2147483648}""",
+            """{"name":null,"slug":"2026-s4","fromYear":2026,"tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"2026 S4","slug":"2026-s4","tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"2026 S4","slug":"2026-s4","fromYear":2026.5,"tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"2026 S4","slug":"2026-s4","fromYear":"2026","tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"2026 S4","slug":"2026-s4","fromYear":true,"tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"2026 S4","slug":"2026-s4","fromYear":2147483648,"tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"2026 S4","slug":"2026-s4","fromYear":2026,"tournamentId":"invalid"}""",
         ],
     )
     fun `malformed bodies and non integer years are rejected`(body: String) {
@@ -250,7 +269,7 @@ class SeasonCreateControllerTests(
     @ParameterizedTest
     @ValueSource(strings = ["name", "slug"])
     fun `duplicate fields return conflict errors`(field: String) {
-        whenever(service.create(tournamentId, request)).thenThrow(SeasonFieldConflictException(field))
+        whenever(service.create(request)).thenThrow(SeasonFieldConflictException(field))
 
         mockMvc.post(createUrl) {
             with(user("writer").roles("SUPER_ADMIN"))
@@ -266,11 +285,16 @@ class SeasonCreateControllerTests(
     }
 
     @Test
-    fun `unknown tournament returns not found for both endpoints`() {
-        whenever(service.form(tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
-        whenever(service.create(tournamentId, request)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
+    fun `unknown tournament returns not found for all creation endpoints`() {
+        whenever(service.form(UiApplication.TOURNAMENT_MANAGER, tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
+        whenever(service.namingContext(tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
+        whenever(service.create(request)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
 
-        mockMvc.get(formUrl) {
+        mockMvc.get(prefilledUrl) {
+            with(user("writer").roles("SUPER_ADMIN"))
+            header(UI_APPLICATION_HEADER, "tournament-manager")
+        }.andExpect { status { isNotFound() } }
+        mockMvc.get(namingUrl) {
             with(user("writer").roles("SUPER_ADMIN"))
         }.andExpect { status { isNotFound() } }
         mockMvc.post(createUrl) {
@@ -280,5 +304,68 @@ class SeasonCreateControllerTests(
             content = mapper.writeValueAsString(request)
         }.andExpect { status { isNotFound() } }
         verifyNoInteractions(auditReader)
+    }
+
+    @Test
+    fun `form can be requested without selecting a tournament`() {
+        whenever(service.form(UiApplication.TOURNAMENT_MANAGER, null)).thenReturn(
+            SeasonCreateFormResponse(seasonCreateManifest(UiApplication.TOURNAMENT_MANAGER)),
+        )
+
+        mockMvc.get(formUrl) {
+            with(user("writer").roles("TOURNAMENT_MANAGER"))
+            header(UI_APPLICATION_HEADER, "tournament-manager")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.manifest.application", equalTo("tournament-manager"))
+            jsonPath("$.manifest.fields.tournamentId.required", equalTo(true))
+            jsonPath("$.manifest.fields.tournamentId.editable", equalTo(true))
+            jsonPath("$.item.tournamentId") { hasJsonPath(); value(null) }
+            jsonPath("$.included.length()", equalTo(0))
+        }
+        verifyNoInteractions(auditReader)
+    }
+
+    @Test
+    fun `form rejects missing or unknown application and malformed tournament ids`() {
+        mockMvc.get(formUrl) {
+            with(user("writer").roles("SUPER_ADMIN"))
+        }.andExpect { status { isBadRequest() } }
+        mockMvc.get(formUrl) {
+            with(user("writer").roles("SUPER_ADMIN"))
+            header(UI_APPLICATION_HEADER, "unknown-app")
+        }.andExpect { status { isBadRequest() } }
+        mockMvc.get("$formUrl?tournamentId=not-a-uuid") {
+            with(user("writer").roles("SUPER_ADMIN"))
+            header(UI_APPLICATION_HEADER, "tournament-manager")
+        }.andExpect { status { isBadRequest() } }
+        verifyNoInteractions(service, auditReader)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
+    fun `writers can refresh naming context for a selected tournament`(role: String) {
+        whenever(service.namingContext(tournamentId)).thenReturn(
+            SeasonNamingContext(tournamentId, mapOf(2026 to listOf("2026 S1", "2026 S3"))),
+        )
+
+        mockMvc.get(namingUrl) {
+            with(user("writer").roles(role))
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.tournamentId", equalTo(tournamentId.toString()))
+            jsonPath("$.existingNamesByYear.2026", contains("2026 S1", "2026 S3"))
+        }
+        verifyNoInteractions(auditReader)
+    }
+
+    @Test
+    fun `naming context requires a valid tournament id`() {
+        for (url in listOf("/api/seasons/naming-context/", "/api/seasons/naming-context/?tournamentId=invalid")) {
+            mockMvc.get(url) {
+                with(user("writer").roles("SUPER_ADMIN"))
+            }.andExpect { status { isBadRequest() } }
+        }
+        verifyNoInteractions(service, auditReader)
     }
 }

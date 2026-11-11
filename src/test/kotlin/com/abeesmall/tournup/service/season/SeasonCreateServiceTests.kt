@@ -2,6 +2,7 @@ package com.abeesmall.tournup.service.season
 
 import com.abeesmall.tournup.dto.season.SeasonCreateRequest
 import com.abeesmall.tournup.dto.season.SeasonData
+import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
@@ -34,7 +35,7 @@ class SeasonCreateServiceTests {
     private val validatorFactory = Validation.buildDefaultValidatorFactory()
     private val service = SeasonCreateService(tournaments, seasons, validatorFactory.validator)
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")
-    private val request = SeasonCreateRequest(name = "2026 S4", slug = "2026-s4", fromYear = 2026)
+    private val request = SeasonCreateRequest(name = "2026 S4", slug = "2026-s4", fromYear = 2026, tournamentId = tournament.id)
 
     @AfterEach
     fun closeValidatorFactory() {
@@ -42,7 +43,7 @@ class SeasonCreateServiceTests {
     }
 
     @Test
-    fun `form groups existing names by year for the requested tournament`() {
+    fun `naming context groups existing names by year for the requested tournament`() {
         whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
         whenever(seasons.findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id))
             .thenReturn(
@@ -54,24 +55,46 @@ class SeasonCreateServiceTests {
                 ),
             )
 
-        val response = service.form(tournament.id)
+        val response = service.namingContext(tournament.id)
 
-        assertEquals(tournament.id, response.context.tournamentId)
+        assertEquals(tournament.id, response.tournamentId)
         assertEquals(
             mapOf(
                 2026 to listOf("2026 S1", "2026 S3", "Winter league"),
                 2027 to listOf("2027 S2"),
             ),
-            response.context.existingNamesByYear,
-        )
-        assertEquals(SeasonCreateRequest("", "", null), response.item)
-        assertEquals(
-            "/api/tournaments/${tournament.id}/seasons/",
-            response.manifest.commands.single().href,
+            response.existingNamesByYear,
         )
         verify(tournaments).findById(tournament.id)
         verify(seasons).findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id)
         verifyNoMoreInteractions(tournaments, seasons)
+    }
+
+    @Test
+    fun `unselected form does not query records or choose a tournament`() {
+        val response = service.form(UiApplication.TOURNAMENT_MANAGER, null)
+
+        assertEquals(SeasonCreateRequest("", "", null, null), response.item)
+        assertEquals(emptyMap(), response.included)
+        verifyNoInteractions(tournaments, seasons)
+    }
+
+    @Test
+    fun `prefilled form includes a resource projection and keeps the reference editable`() {
+        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        val empty = service.form(UiApplication.TOURNAMENT_MANAGER, null)
+        val selected = service.form(UiApplication.TOURNAMENT_MANAGER, tournament.id)
+
+        assertEquals(empty.manifest, selected.manifest)
+        assertEquals(tournament.id, selected.item.tournamentId)
+        assertEquals(
+            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            selected.included,
+        )
+        assertEquals(true, selected.manifest.fields.getValue("tournamentId").editable)
+        verify(tournaments).findById(tournament.id)
+        verifyNoMoreInteractions(tournaments)
+        verifyNoInteractions(seasons)
     }
 
     @Test
@@ -80,14 +103,17 @@ class SeasonCreateServiceTests {
         whenever(seasons.findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id))
             .thenReturn(emptyList())
 
-        assertEquals(emptyMap(), service.form(tournament.id).context.existingNamesByYear)
+        assertEquals(emptyMap(), service.namingContext(tournament.id).existingNamesByYear)
     }
 
     @Test
-    fun `unknown tournament has no form and does not query seasons`() {
+    fun `unknown tournament has no form or naming context`() {
         whenever(tournaments.findById(tournament.id)).thenReturn(Optional.empty())
 
-        assertFailsWith<SeasonTournamentNotFoundException> { service.form(tournament.id) }
+        assertFailsWith<SeasonTournamentNotFoundException> { service.namingContext(tournament.id) }
+        assertFailsWith<SeasonTournamentNotFoundException> {
+            service.form(UiApplication.TOURNAMENT_MANAGER, tournament.id)
+        }
 
         verifyNoInteractions(seasons)
     }
@@ -101,7 +127,7 @@ class SeasonCreateServiceTests {
         }
         val custom = request.copy(name = "Summer league", slug = "custom-summer-league")
 
-        val response = service.create(tournament.id, custom)
+        val response = service.create(custom)
         val saved = assertNotNull(persisted)
 
         assertSame(tournament, saved.tournament)
@@ -131,11 +157,12 @@ class SeasonCreateServiceTests {
             "slug" to request.copy(slug = "Invalid_Slug"),
             "slug" to request.copy(slug = "x".repeat(256)),
             "fromYear" to request.copy(fromYear = null),
+            "tournamentId" to request.copy(tournamentId = null),
         )
 
         for ((field, invalid) in cases) {
             val failure = assertFailsWith<ConstraintViolationException> {
-                service.create(tournament.id, invalid)
+                service.create(invalid)
             }
             assertEquals(
                 setOf(field),
@@ -150,7 +177,7 @@ class SeasonCreateServiceTests {
         whenever(tournaments.findById(tournament.id)).thenReturn(Optional.empty())
 
         assertFailsWith<SeasonTournamentNotFoundException> {
-            service.create(tournament.id, request)
+            service.create(request)
         }
 
         verifyNoInteractions(seasons)
@@ -163,7 +190,7 @@ class SeasonCreateServiceTests {
             .thenReturn(true)
 
         val failure = assertFailsWith<SeasonFieldConflictException> {
-            service.create(tournament.id, request)
+            service.create(request)
         }
 
         assertEquals("name", failure.field)
@@ -178,7 +205,7 @@ class SeasonCreateServiceTests {
             .thenReturn(true)
 
         val failure = assertFailsWith<SeasonFieldConflictException> {
-            service.create(tournament.id, request)
+            service.create(request)
         }
 
         assertEquals("slug", failure.field)
@@ -195,7 +222,7 @@ class SeasonCreateServiceTests {
         whenever(seasons.saveAndFlush(anySeason())).thenThrow(failure)
 
         val conflict = assertFailsWith<SeasonFieldConflictException> {
-            service.create(tournament.id, request)
+            service.create(request)
         }
 
         assertEquals(field, conflict.field)
@@ -211,7 +238,7 @@ class SeasonCreateServiceTests {
         assertSame(
             failure,
             assertFailsWith<DataIntegrityViolationException> {
-                service.create(tournament.id, request)
+                service.create(request)
             },
         )
     }

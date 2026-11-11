@@ -4,6 +4,7 @@ import com.abeesmall.tournup.ui.UiCommandMethod
 import com.abeesmall.tournup.ui.UiDataType
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiOption
+import com.abeesmall.tournup.ui.UiReference
 import java.util.UUID
 
 data class UiResourceCatalogue(
@@ -34,6 +35,7 @@ data class UiResourceField(
     val options: List<UiOption>,
     val maxLength: Int?,
     val pattern: String?,
+    val reference: UiReference?,
 )
 
 data class UiResourceIdentifier(

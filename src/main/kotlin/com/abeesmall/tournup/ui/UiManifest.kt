@@ -36,6 +36,7 @@ data class UiField(
     val behaviours: List<UiBehaviour> = emptyList(),
     val maxLength: Int? = null,
     val pattern: String? = null,
+    val reference: UiReference? = null,
 )
 
 data class UiOption(
@@ -45,7 +46,14 @@ data class UiOption(
 
 data class UiBehaviour(
     val type: UiBehaviourType,
-    val sourceField: String,
+    val dependsOn: List<String>,
+    val contextOperation: String? = null,
+)
+
+data class UiReference(
+    val resource: String,
+    val lookupOperation: String,
+    val resolveOperation: String,
 )
 
 data class UiCommand(
@@ -78,6 +86,7 @@ enum class UiDataType(
     STRING("string"),
     ENUM("enum"),
     INTEGER("integer"),
+    REFERENCE("reference"),
 }
 
 enum class UiWidget(
@@ -88,6 +97,7 @@ enum class UiWidget(
     SELECT("select"),
     DISPLAY("display"),
     NUMBER("number"),
+    RECORD_SELECT("record-select"),
 }
 
 enum class UiBehaviourType(

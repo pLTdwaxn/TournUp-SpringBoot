@@ -18,13 +18,14 @@ fun seasonListManifest(tournamentId: UUID?, canCreate: Boolean = false): UiManif
             columns = listOf("name"),
         ),
     ).copy(
-        commands = if (canCreate && tournamentId != null) {
+        commands = if (canCreate) {
             listOf(
                 UiCommand(
                     id = "create",
                     label = "Create season",
                     method = UiCommandMethod.GET,
-                    href = "/api/tournaments/$tournamentId/seasons/create/",
+                    href = "/api/seasons/create/" +
+                        (tournamentId?.let { "?tournamentId=$it" } ?: ""),
                 ),
             )
         } else {

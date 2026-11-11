@@ -61,14 +61,18 @@ class UiResourceConfiguration {
             ),
             UiResourceOperation(
                 "create-form", UiOperation.CREATE, UiCommandMethod.GET,
-                "/api/tournaments/{tournamentId}/seasons/create/", listOf("tournamentId"),
+                "/api/seasons/create/",
             ),
             UiResourceOperation(
                 "create", UiOperation.CREATE, UiCommandMethod.POST,
-                "/api/tournaments/{tournamentId}/seasons/", listOf("tournamentId"),
+                "/api/seasons/",
             ),
             UiResourceOperation("edit-form", UiOperation.UPDATE, UiCommandMethod.GET, "/api/seasons/{id}/edit/"),
             UiResourceOperation("update", UiOperation.UPDATE, UiCommandMethod.PUT, "/api/seasons/{id}/"),
+            UiResourceOperation(
+                "naming-context", UiOperation.CREATE, UiCommandMethod.GET,
+                "/api/seasons/naming-context/?tournamentId={tournamentId}", listOf("tournamentId"),
+            ),
         ),
         canRead = { it.isAuthenticated },
         canWrite = ::canManageSeasons,

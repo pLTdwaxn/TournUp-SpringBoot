@@ -56,6 +56,17 @@ class SeasonDetailControllerTests(
     private val nestedUrl = "/api/tournaments/${tournament.id}/seasons/${season.id}/"
 
     @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `retired nested create form cannot fall through to a slug lookup`() {
+        for (parent in listOf(tournament.id.toString(), tournament.slug)) {
+            mockMvc.get("/api/tournaments/$parent/seasons/create/").andExpect {
+                status { isNotFound() }
+            }
+        }
+        verifyNoInteractions(seasons, tournaments, auditReader)
+    }
+
+    @Test
     fun `requires authentication before looking up the season`() {
         mockMvc.get(url).andExpect { status { isUnauthorized() } }
         mockMvc.get(nestedUrl).andExpect { status { isUnauthorized() } }

@@ -85,7 +85,11 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[*].key", contains("season", "tournament"))
             jsonPath("$.resources[0].label", equalTo("Seasons"))
             jsonPath("$.resources[0].displayField", equalTo("name"))
-            jsonPath("$.resources[0].fields.length()", equalTo(3))
+            jsonPath("$.resources[0].fields.length()", equalTo(4))
+            jsonPath("$.resources[0].fields.tournamentId.dataType", equalTo("reference"))
+            jsonPath("$.resources[0].fields.tournamentId.reference.resource", equalTo("tournament"))
+            jsonPath("$.resources[0].fields.tournamentId.reference.lookupOperation", equalTo("list"))
+            jsonPath("$.resources[0].fields.tournamentId.reference.resolveOperation", equalTo("read"))
             jsonPath("$.resources[0].fields.fromYear.dataType", equalTo("integer"))
             jsonPath("$.resources[0].fields.fromYear.required", equalTo(true))
             jsonPath("$.resources[0].fields.name.maxLength", equalTo(255))
@@ -117,9 +121,12 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[1].canReadLastAudit", equalTo(true))
             jsonPath(
                 "$.resources[0].operations[*].id",
-                contains("list", "list-in-tournament", "read", "read-by-slug", "create-form", "create", "edit-form", "update"),
+                contains("list", "list-in-tournament", "read", "read-by-slug", "create-form", "create", "edit-form", "update", "naming-context"),
             )
-            jsonPath("$.resources[0].operations[4].requiredContext", contains("tournamentId"))
+            jsonPath("$.resources[0].operations[4].href", equalTo("/api/seasons/create/"))
+            jsonPath("$.resources[0].operations[4].requiredContext.length()", equalTo(0))
+            jsonPath("$.resources[0].operations[5].href", equalTo("/api/seasons/"))
+            jsonPath("$.resources[0].operations[8].requiredContext", contains("tournamentId"))
             jsonPath("$.resources[0].operations[5].method", equalTo("POST"))
             jsonPath("$.resources[0].operations[7].method", equalTo("PUT"))
             jsonPath(

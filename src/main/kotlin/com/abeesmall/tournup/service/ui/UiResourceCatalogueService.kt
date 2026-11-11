@@ -41,6 +41,7 @@ class UiResourceCatalogueService(private val registry: UiResourceRegistry) {
                             options = field.options,
                             maxLength = field.maxLength,
                             pattern = field.pattern,
+                            reference = field.reference,
                         )
                     },
                     identifier = definition.identifier,

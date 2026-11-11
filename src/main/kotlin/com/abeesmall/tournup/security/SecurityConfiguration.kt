@@ -37,7 +37,8 @@ class SecurityConfiguration {
                 ).permitAll()
                 .requestMatchers(
                     HttpMethod.GET,
-                    "/api/tournaments/{tournamentId}/seasons/create/",
+                    "/api/seasons/create/",
+                    "/api/seasons/naming-context/",
                 ).hasAnyRole(*seasonWriterRoles.toTypedArray())
                 .requestMatchers(
                     HttpMethod.GET,
@@ -51,7 +52,7 @@ class SecurityConfiguration {
                 ).hasAnyRole(*seasonWriterRoles.toTypedArray())
                 .requestMatchers(
                     HttpMethod.POST,
-                    "/api/tournaments/{tournamentId}/seasons/",
+                    "/api/seasons/",
                 ).hasAnyRole(*seasonWriterRoles.toTypedArray())
                 .requestMatchers(
                     HttpMethod.GET,

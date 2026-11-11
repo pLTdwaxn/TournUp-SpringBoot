@@ -24,7 +24,7 @@ class SeasonUpdateService(
             return null
         }
         return SeasonUpdateFormResponse(
-            manifest = seasonUpdateManifest(season.id, season.tournament.id),
+            manifest = seasonUpdateManifest(season.id),
             item = SeasonUpdateRequest(season.name, season.slug, season.fromYear),
             context = seasonDetailContext(season.tournament),
         )

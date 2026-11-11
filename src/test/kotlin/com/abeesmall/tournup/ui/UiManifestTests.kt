@@ -9,6 +9,8 @@ class UiManifestTests {
 
     @Test
     fun `contract enums use their wire values`() {
+        assertEquals("\"reference\"", mapper.writeValueAsString(UiDataType.REFERENCE))
+        assertEquals("\"record-select\"", mapper.writeValueAsString(UiWidget.RECORD_SELECT))
         assertEquals(
             "\"create\"",
             mapper.writeValueAsString(UiOperation.CREATE),

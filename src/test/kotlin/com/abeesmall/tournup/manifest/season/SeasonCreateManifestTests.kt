@@ -1,116 +1,86 @@
 package com.abeesmall.tournup.manifest.season
 
-import com.abeesmall.tournup.dto.season.SEASON_NAME_MAX_LENGTH
-import com.abeesmall.tournup.dto.season.SEASON_SLUG_MAX_LENGTH
-import com.abeesmall.tournup.dto.season.SEASON_SLUG_PATTERN
-import com.abeesmall.tournup.dto.season.SeasonCreateContext
 import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
+import com.abeesmall.tournup.dto.season.SeasonCreateRequest
+import com.abeesmall.tournup.ui.UiApplication
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper
 
 class SeasonCreateManifestTests {
     private val mapper = JsonMapper.builder().build()
+    private val application = UiApplication.TOURNAMENT_MANAGER
 
     @Test
-    fun `form wire contract defines only editable season inputs in dependency order`() {
-        val tournamentId = UUID.randomUUID()
-        val json = mapper.readTree(
-            mapper.writeValueAsString(seasonCreateManifest(tournamentId)),
-        )
-
-        assertEquals(1, json.path("contractVersion").intValue())
+    fun `form defines an editable required reference before its dependent fields`() {
+        val json = mapper.readTree(mapper.writeValueAsString(seasonCreateManifest(application)))
         assertEquals("tournament-manager", json.path("application").stringValue())
-        assertEquals("season", json.path("resource").stringValue())
         assertEquals("create", json.path("operation").stringValue())
-        assertEquals("form", json.path("layout").path("type").stringValue())
         assertEquals(
-            listOf("fromYear", "name", "slug"),
+            listOf("tournamentId", "fromYear", "name", "slug"),
             json.path("layout").path("sections").path(0).path("fields")
                 .valueStream().map { it.stringValue() }.toList(),
         )
-
         val fields = json.path("fields")
-        assertEquals(3, fields.size())
-        for (id in listOf("fromYear", "name", "slug")) {
-            assertTrue(fields.path(id).path("required").booleanValue())
-            assertTrue(fields.path(id).path("editable").booleanValue())
+        assertEquals(4, fields.size())
+        for (field in listOf("tournamentId", "fromYear", "name", "slug")) {
+            assertTrue(fields.path(field).path("required").booleanValue())
+            assertTrue(fields.path(field).path("editable").booleanValue())
         }
+        val reference = fields.path("tournamentId")
+        assertEquals("reference", reference.path("dataType").stringValue())
+        assertEquals("record-select", reference.path("widget").stringValue())
+        assertEquals("tournament", reference.path("reference").path("resource").stringValue())
+        assertEquals("list", reference.path("reference").path("lookupOperation").stringValue())
+        assertEquals("read", reference.path("reference").path("resolveOperation").stringValue())
         assertEquals("integer", fields.path("fromYear").path("dataType").stringValue())
         assertEquals("number", fields.path("fromYear").path("widget").stringValue())
-        assertEquals("text", fields.path("name").path("widget").stringValue())
-        assertEquals("text", fields.path("slug").path("widget").stringValue())
-        assertEquals(
-            SEASON_NAME_MAX_LENGTH,
-            fields.path("name").path("maxLength").intValue(),
-        )
-        assertEquals(
-            SEASON_SLUG_MAX_LENGTH,
-            fields.path("slug").path("maxLength").intValue(),
-        )
-        assertEquals(
-            SEASON_SLUG_PATTERN,
-            fields.path("slug").path("pattern").stringValue(),
-        )
-
-        val command = json.path("commands").path(0)
-        assertEquals("POST", command.path("method").stringValue())
-        assertEquals(
-            "/api/tournaments/$tournamentId/seasons/",
-            command.path("href").stringValue(),
-        )
+        assertEquals(255, fields.path("name").path("maxLength").intValue())
+        assertEquals(255, fields.path("slug").path("maxLength").intValue())
+        assertEquals("POST", json.path("commands").path(0).path("method").stringValue())
+        assertEquals("/api/seasons/", json.path("commands").path(0).path("href").stringValue())
     }
 
     @Test
-    fun `name and slug behaviours use their agreed sources and wire names`() {
-        val json = mapper.readTree(
-            mapper.writeValueAsString(seasonCreateManifest(UUID.randomUUID())),
-        )
+    fun `behaviours declare reference and year dependencies without the old sourceField contract`() {
+        val json = mapper.readTree(mapper.writeValueAsString(seasonCreateManifest(application)))
         val fields = json.path("fields")
-        val nameBehaviour = fields.path("name").path("behaviours").path(0)
-        val slugBehaviour = fields.path("slug").path("behaviours").path(0)
-
+        val name = fields.path("name").path("behaviours").path(0)
+        val slug = fields.path("slug").path("behaviours").path(0)
+        assertEquals("season-name-from-year", name.path("type").stringValue())
         assertEquals(
-            "season-name-from-year",
-            nameBehaviour.path("type").stringValue(),
+            listOf("tournamentId", "fromYear"),
+            name.path("dependsOn").valueStream().map { it.stringValue() }.toList(),
         )
-        assertEquals("fromYear", nameBehaviour.path("sourceField").stringValue())
-        assertEquals("slugify", slugBehaviour.path("type").stringValue())
-        assertEquals("name", slugBehaviour.path("sourceField").stringValue())
+        assertEquals("naming-context", name.path("contextOperation").stringValue())
+        assertEquals("slugify", slug.path("type").stringValue())
+        assertEquals(listOf("name"), slug.path("dependsOn").valueStream().map { it.stringValue() }.toList())
+        assertFalse(name.has("sourceField"))
+        assertFalse(slug.has("sourceField"))
     }
 
     @Test
-    fun `form supplies naming context without calculating a name on the server`() {
-        val tournamentId = UUID.randomUUID()
-        val response = SeasonCreateFormResponse(
-            manifest = seasonCreateManifest(tournamentId),
-            context = SeasonCreateContext(
-                tournamentId = tournamentId,
-                existingNamesByYear = mapOf(
-                    2026 to listOf("2026 S1", "2026 S3", "Winter league"),
-                    2027 to listOf("2027 S2"),
-                ),
-            ),
+    fun `prefilled values and included reference records leave the field definition unchanged`() {
+        val id = UUID.randomUUID()
+        val empty = SeasonCreateFormResponse(seasonCreateManifest(application))
+        val selected = empty.copy(
+            item = SeasonCreateRequest("", "", null, id),
+            included = mapOf("tournament" to listOf(mapOf("id" to id, "name" to "Winter Open"))),
         )
-        val json = mapper.readTree(mapper.writeValueAsString(response))
-
-        assertEquals(
-            tournamentId.toString(),
-            json.path("context").path("tournamentId").stringValue(),
-        )
-        val names = json.path("context").path("existingNamesByYear")
-        assertEquals(
-            listOf("2026 S1", "2026 S3", "Winter league"),
-            names.path("2026").valueStream().map { it.stringValue() }.toList(),
-        )
-        assertEquals(
-            listOf("2027 S2"),
-            names.path("2027").valueStream().map { it.stringValue() }.toList(),
-        )
+        assertEquals(empty.manifest, selected.manifest)
+        val json = mapper.readTree(mapper.writeValueAsString(selected))
+        assertEquals(id.toString(), json.path("item").path("tournamentId").stringValue())
+        val included = json.path("included").path("tournament").path(0)
+        assertEquals(id.toString(), included.path("id").stringValue())
+        assertEquals("Winter Open", included.path("name").stringValue())
         assertEquals("", json.path("item").path("name").stringValue())
         assertEquals("", json.path("item").path("slug").stringValue())
         assertTrue(json.path("item").path("fromYear").isNull)
+        val unselected = mapper.readTree(mapper.writeValueAsString(empty))
+        assertTrue(unselected.path("item").path("tournamentId").isNull)
+        assertEquals(0, unselected.path("included").size())
     }
 }

@@ -16,13 +16,13 @@ import com.abeesmall.tournup.ui.UiManifest
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiWidget
-import java.util.UUID
+import com.abeesmall.tournup.ui.UiReference
 
-fun seasonCreateManifest(tournamentId: UUID): UiManifest =
+fun seasonCreateManifest(application: UiApplication): UiManifest =
     UiManifest(
         contractVersion = 1,
         id = "season-create",
-        application = UiApplication.TOURNAMENT_MANAGER.id,
+        application = application.id,
         resource = "season",
         operation = UiOperation.CREATE,
         title = "Create season",
@@ -32,7 +32,7 @@ fun seasonCreateManifest(tournamentId: UUID): UiManifest =
                 UiSection(
                     id = "details",
                     title = "Details",
-                    fields = listOf("fromYear", "name", "slug"),
+                    fields = listOf("tournamentId", "fromYear", "name", "slug"),
                 ),
             ),
         ),
@@ -42,13 +42,21 @@ fun seasonCreateManifest(tournamentId: UUID): UiManifest =
                 id = "create",
                 label = "Create season",
                 method = UiCommandMethod.POST,
-                href = "/api/tournaments/$tournamentId/seasons/",
+                href = "/api/seasons/",
             ),
         ),
     )
 
 internal fun seasonCreateFields(): Map<String, UiField> =
     mapOf(
+        "tournamentId" to UiField(
+            label = "Tournament",
+            dataType = UiDataType.REFERENCE,
+            widget = UiWidget.RECORD_SELECT,
+            required = true,
+            editable = true,
+            reference = UiReference("tournament", "list", "read"),
+        ),
         "fromYear" to UiField(
             label = "From year",
             dataType = UiDataType.INTEGER,
@@ -65,7 +73,8 @@ internal fun seasonCreateFields(): Map<String, UiField> =
             behaviours = listOf(
                 UiBehaviour(
                     type = UiBehaviourType.SEASON_NAME_FROM_YEAR,
-                    sourceField = "fromYear",
+                    dependsOn = listOf("tournamentId", "fromYear"),
+                    contextOperation = "naming-context",
                 ),
             ),
             maxLength = SEASON_NAME_MAX_LENGTH,
@@ -79,7 +88,7 @@ internal fun seasonCreateFields(): Map<String, UiField> =
             behaviours = listOf(
                 UiBehaviour(
                     type = UiBehaviourType.SLUGIFY,
-                    sourceField = "name",
+                    dependsOn = listOf("name"),
                 ),
             ),
             maxLength = SEASON_SLUG_MAX_LENGTH,
