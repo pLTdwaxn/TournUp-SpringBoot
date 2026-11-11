@@ -13,10 +13,9 @@ fun seasonUpdateManifest(id: UUID): UiManifest {
         id = "season-update",
         operation = UiOperation.UPDATE,
         title = "Edit season",
-        layout = base.layout.copy(
-            sections = base.layout.sections.map { it.copy(fields = it.fields - "tournamentId") },
-        ),
-        fields = (base.fields - "tournamentId").mapValues { (_, field) -> field.copy(behaviours = emptyList()) },
+        fields = base.fields.mapValues { (fieldId, field) ->
+            field.copy(editable = fieldId != "tournamentId", behaviours = emptyList())
+        },
         commands = listOf(
             UiCommand(
                 id = "update",

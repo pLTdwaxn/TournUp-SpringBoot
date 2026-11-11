@@ -7,6 +7,9 @@ import org.springframework.dao.DataIntegrityViolationException
 class SeasonTournamentNotFoundException(tournamentId: UUID) :
     RuntimeException("Tournament not found: $tournamentId")
 
+class SeasonTournamentChangeException :
+    RuntimeException("Tournament cannot be changed after creation")
+
 class SeasonFieldConflictException(
     val field: String,
     cause: Throwable? = null,

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import tools.jackson.databind.annotation.JsonDeserialize
+import java.util.UUID
 
 data class SeasonUpdateRequest(
     @field:NotBlank(message = "Name is required")
@@ -28,4 +29,7 @@ data class SeasonUpdateRequest(
     @field:NotNull(message = "From year is required")
     @field:JsonDeserialize(using = SeasonYearDeserializer::class)
     val fromYear: Int?,
+
+    @field:NotNull(message = "Tournament is required")
+    val tournamentId: UUID?,
 )

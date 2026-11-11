@@ -2,6 +2,7 @@ package com.abeesmall.tournup.controller.season
 
 import com.abeesmall.tournup.service.RecordContextRequiredException
 import com.abeesmall.tournup.service.season.SeasonFieldConflictException
+import com.abeesmall.tournup.service.season.SeasonTournamentChangeException
 import com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
@@ -20,6 +21,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
     ],
 )
 class SeasonExceptionHandler {
+    @ExceptionHandler(SeasonTournamentChangeException::class)
+    fun tournamentChange(exception: SeasonTournamentChangeException): ProblemDetail =
+        validationProblem(mapOf("tournamentId" to listOf(exception.message.orEmpty())))
+
     @ExceptionHandler(RecordContextRequiredException::class)
     fun missingContext(exception: RecordContextRequiredException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.message.orEmpty())

@@ -52,7 +52,7 @@ class SeasonUpdateControllerTests(
     private val existing = Season(
         tournament = tournament, name = "2026 S1", slug = "2026-s1", fromYear = 2026,
     )
-    private val request = SeasonUpdateRequest("Summer league", "summer-league", 2027)
+    private val request = SeasonUpdateRequest("Summer league", "summer-league", 2027, tournament.id)
     private val shallowUrl = "/api/seasons/${existing.id}/"
     private val urls = listOf(shallowUrl, "/api/tournaments/${tournament.id}/seasons/${existing.id}/")
 
@@ -68,7 +68,17 @@ class SeasonUpdateControllerTests(
                 status { isOk() }
                 jsonPath("$.manifest.operation", equalTo("update"))
                 jsonPath("$.manifest.layout.type", equalTo("form"))
-                jsonPath("$.manifest.layout.sections[0].fields", contains("fromYear", "name", "slug"))
+                jsonPath("$.manifest.layout.sections[0].fields", contains("tournamentId", "fromYear", "name", "slug"))
+                jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
+                jsonPath("$.manifest.fields.tournamentId.widget", equalTo("record-select"))
+                jsonPath("$.manifest.fields.tournamentId.required", equalTo(true))
+                jsonPath("$.manifest.fields.tournamentId.editable", equalTo(false))
+                jsonPath("$.manifest.fields.tournamentId.reference.resource", equalTo("tournament"))
+                jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("list"))
+                jsonPath("$.manifest.fields.tournamentId.reference.resolveOperation", equalTo("read"))
+                jsonPath("$.item.tournamentId", equalTo(tournament.id.toString()))
+                jsonPath("$.included.tournament[0].id", equalTo(tournament.id.toString()))
+                jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
                 jsonPath("$.manifest.fields.fromYear.widget", equalTo("number"))
                 jsonPath("$.manifest.fields.fromYear.required", equalTo(true))
                 jsonPath("$.manifest.fields.name.behaviours.length()", equalTo(0))
@@ -211,6 +221,7 @@ class SeasonUpdateControllerTests(
             "slug" to request.copy(slug = "Invalid_Slug"),
             "slug" to request.copy(slug = "x".repeat(256)),
             "fromYear" to request.copy(fromYear = null),
+            "tournamentId" to request.copy(tournamentId = null),
         )
         for (url in urls) {
             for ((field, invalid) in cases) {
@@ -228,13 +239,56 @@ class SeasonUpdateControllerTests(
         verifyNoInteractions(seasons, auditReader)
     }
 
+    @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `a different submitted tournament returns a field error through both routes`() {
+        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        val reparented = request.copy(tournamentId = UUID.randomUUID())
+
+        for (url in urls) {
+            mockMvc.put(url) {
+                with(csrf())
+                contentType = MediaType.APPLICATION_JSON
+                content = mapper.writeValueAsString(reparented)
+            }.andExpect {
+                status { isBadRequest() }
+                content { contentType("application/problem+json") }
+                jsonPath("$.errors.tournamentId[0]", equalTo("Tournament cannot be changed after creation"))
+            }
+        }
+        assertEquals(tournament.id, existing.tournament.id)
+        assertEquals("2026 S1", existing.name)
+        assertEquals("2026-s1", existing.slug)
+        assertEquals(2026, existing.fromYear)
+        verify(seasons, times(2)).findById(existing.id)
+        verifyNoMoreInteractions(seasons)
+        verifyNoInteractions(auditReader)
+    }
+
+    @Test
+    @WithMockUser(roles = ["SUPER_ADMIN"])
+    fun `omitting tournament is a validation error before persistence access`() {
+        for (url in urls) {
+            mockMvc.put(url) {
+                with(csrf())
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"name":"Summer league","slug":"summer-league","fromYear":2027}"""
+            }.andExpect {
+                status { isBadRequest() }
+                jsonPath("$.errors.tournamentId[0]", equalTo("Tournament is required"))
+            }
+        }
+        verifyNoInteractions(seasons, auditReader)
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings = [
             "", "not-json", "{}",
-            """{"name":"Summer league","slug":"summer-league"}""",
-            """{"name":"Summer league","slug":"summer-league","fromYear":2027.5}""",
-            """{"name":"Summer league","slug":"summer-league","fromYear":"2027"}""",
+            """{"name":"Summer league","slug":"summer-league","tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"Summer league","slug":"summer-league","fromYear":2027.5,"tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"Summer league","slug":"summer-league","fromYear":"2027","tournamentId":"11111111-1111-4111-8111-111111111111"}""",
+            """{"name":"Summer league","slug":"summer-league","fromYear":2027,"tournamentId":"invalid"}""",
         ],
     )
     @WithMockUser(roles = ["SUPER_ADMIN"])

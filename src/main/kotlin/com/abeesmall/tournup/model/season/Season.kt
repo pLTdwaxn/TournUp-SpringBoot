@@ -39,9 +39,10 @@ class Season(
     @JoinColumn(
         name = "tournament_id",
         nullable = false,
+        updatable = false,
         foreignKey = ForeignKey(name = "seasons_tournament_fk"),
     )
-    var tournament: Tournament,
+    val tournament: Tournament,
 
     @Column(nullable = false, length = 255)
     var name: String,

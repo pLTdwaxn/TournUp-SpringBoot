@@ -39,7 +39,7 @@ class SeasonUpdateServiceTests {
         slug = "2026-s1",
         fromYear = 2026,
     )
-    private val request = SeasonUpdateRequest("Summer league", "summer-league", 2027)
+    private val request = SeasonUpdateRequest("Summer league", "summer-league", 2027, tournament.id)
 
     @AfterEach
     fun closeValidatorFactory() {
@@ -70,12 +70,22 @@ class SeasonUpdateServiceTests {
     }
 
     @Test
-    fun `edit form preserves existing values and disables generated suggestions`() {
+    fun `edit form includes its readonly tournament and disables generated suggestions`() {
         whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
 
         val response = assertNotNull(service.form(existing.id))
 
-        assertEquals(SeasonUpdateRequest("2026 S1", "2026-s1", 2026), response.item)
+        assertEquals(SeasonUpdateRequest("2026 S1", "2026-s1", 2026, tournament.id), response.item)
+        assertEquals(
+            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            response.included,
+        )
+        val reference = response.manifest.fields.getValue("tournamentId")
+        assertEquals(false, reference.editable)
+        assertEquals("tournament", reference.reference?.resource)
+        for (field in listOf("fromYear", "name", "slug")) {
+            assertEquals(true, response.manifest.fields.getValue(field).editable)
+        }
         assertEquals(tournament.id, response.context.tournament.id)
         assertEquals(tournament.name, response.context.tournament.name)
         assertEquals("/api/seasons/${existing.id}/", response.manifest.commands.single().href)
@@ -113,7 +123,7 @@ class SeasonUpdateServiceTests {
 
     @Test
     fun `allows changing the year while keeping the current name and slug`() {
-        val unchanged = SeasonUpdateRequest(existing.name, existing.slug, 2027)
+        val unchanged = SeasonUpdateRequest(existing.name, existing.slug, 2027, tournament.id)
         whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
         whenever(seasons.saveAndFlush(existing)).thenReturn(existing)
 
@@ -146,6 +156,7 @@ class SeasonUpdateServiceTests {
             "slug" to request.copy(slug = "Invalid_Slug"),
             "slug" to request.copy(slug = "x".repeat(256)),
             "fromYear" to request.copy(fromYear = null),
+            "tournamentId" to request.copy(tournamentId = null),
         )
         for ((field, invalid) in cases) {
             val failure = assertFailsWith<ConstraintViolationException> {
@@ -157,6 +168,22 @@ class SeasonUpdateServiceTests {
             )
         }
         verifyNoInteractions(seasons)
+    }
+
+    @Test
+    fun `a different submitted tournament is rejected before changing any fields`() {
+        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+
+        assertFailsWith<SeasonTournamentChangeException> {
+            service.update(existing.id, request.copy(tournamentId = UUID.randomUUID()))
+        }
+
+        assertSame(tournament, existing.tournament)
+        assertEquals("2026 S1", existing.name)
+        assertEquals("2026-s1", existing.slug)
+        assertEquals(2026, existing.fromYear)
+        verify(seasons).findById(existing.id)
+        verifyNoMoreInteractions(seasons)
     }
 
     @ParameterizedTest

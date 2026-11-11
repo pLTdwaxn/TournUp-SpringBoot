@@ -25,8 +25,11 @@ class SeasonUpdateService(
         }
         return SeasonUpdateFormResponse(
             manifest = seasonUpdateManifest(season.id),
-            item = SeasonUpdateRequest(season.name, season.slug, season.fromYear),
+            item = SeasonUpdateRequest(season.name, season.slug, season.fromYear, season.tournament.id),
             context = seasonDetailContext(season.tournament),
+            included = mapOf(
+                "tournament" to listOf(mapOf("id" to season.tournament.id, "name" to season.tournament.name)),
+            ),
         )
     }
 
@@ -44,6 +47,9 @@ class SeasonUpdateService(
         val actualTournamentId = season.tournament.id
         if (tournamentId != null && actualTournamentId != tournamentId) {
             return null
+        }
+        if (request.tournamentId != actualTournamentId) {
+            throw SeasonTournamentChangeException()
         }
 
         if (seasons.existsByTournamentIdAndNameAndIdNot(actualTournamentId, request.name, id)) {

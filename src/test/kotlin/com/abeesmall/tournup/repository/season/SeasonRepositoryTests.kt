@@ -100,6 +100,31 @@ class SeasonRepositoryTests {
     }
 
     @Test
+    fun `merging detached season data cannot change its persisted tournament`() {
+        val original = newTournament()
+        val other = newTournament()
+        val saved = seasons.saveAndFlush(newSeason(original))
+        entityManager.clear()
+
+        seasons.saveAndFlush(
+            Season(
+                id = saved.id,
+                tournament = other,
+                name = "Updated season",
+                slug = "updated-season",
+                fromYear = 2027,
+            ),
+        )
+        entityManager.clear()
+
+        val reloaded = seasons.findById(saved.id).orElseThrow()
+        assertEquals(original.id, reloaded.tournament.id)
+        assertEquals("Updated season", reloaded.name)
+        assertEquals("updated-season", reloaded.slug)
+        assertEquals(2027, reloaded.fromYear)
+    }
+
+    @Test
     fun `creation queries include only the requested tournament`() {
         val tournament = newTournament()
         val other = newTournament()

@@ -6,4 +6,5 @@ data class SeasonUpdateFormResponse(
     val manifest: UiManifest,
     val item: SeasonUpdateRequest,
     val context: SeasonDetailContext,
+    val included: Map<String, List<Map<String, Any>>>,
 )
