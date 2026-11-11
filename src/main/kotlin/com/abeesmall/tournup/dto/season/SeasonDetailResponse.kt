@@ -7,6 +7,7 @@ data class SeasonDetailResponse(
     val manifest: UiManifest,
     val item: SeasonData,
     val context: SeasonDetailContext,
+    val included: Map<String, List<Map<String, Any>>>,
 )
 
 data class SeasonDetailContext(

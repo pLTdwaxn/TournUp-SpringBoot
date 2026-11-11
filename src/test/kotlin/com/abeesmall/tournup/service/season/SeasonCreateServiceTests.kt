@@ -140,6 +140,10 @@ class SeasonCreateServiceTests {
         )
         assertEquals(tournament.id, response.context.tournament.id)
         assertEquals(tournament.name, response.context.tournament.name)
+        assertEquals(
+            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            response.included,
+        )
         assertEquals("/api/seasons/${saved.id}/edit/", response.manifest.commands.single().href)
         verify(tournaments).findById(tournament.id)
         verify(seasons).existsByTournamentIdAndName(tournament.id, custom.name)

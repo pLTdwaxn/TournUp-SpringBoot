@@ -62,6 +62,10 @@ class SeasonUpdateServiceTests {
             result.item,
         )
         assertEquals(tournament.name, result.context.tournament.name)
+        assertEquals(
+            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            result.included,
+        )
         verify(seasons).findById(existing.id)
         verify(seasons).existsByTournamentIdAndNameAndIdNot(tournament.id, request.name, existing.id)
         verify(seasons).existsByTournamentIdAndSlugAndIdNot(tournament.id, request.slug, existing.id)

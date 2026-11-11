@@ -12,18 +12,25 @@ import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiWidget
 
-fun seasonDetailManifest(title: String, editHref: String? = null): UiManifest =
-    seasonReadManifest(
+fun seasonDetailManifest(title: String, editHref: String? = null): UiManifest {
+    val base = seasonReadManifest(
         id = "season-detail",
         operation = UiOperation.READ,
         title = title,
         layout = UiLayout(
             type = UiLayoutType.DETAIL,
             sections = listOf(
-                UiSection("details", "Details", listOf("fromYear", "name", "slug")),
+                UiSection("details", "Details", listOf("tournamentId", "fromYear", "name", "slug")),
             ),
         ),
-    ).copy(
+    )
+    return base.copy(
+        fields = mapOf(
+            "tournamentId" to seasonCreateFields().getValue("tournamentId").copy(
+                widget = UiWidget.DISPLAY,
+                editable = false,
+            ),
+        ) + base.fields,
         commands = if (editHref != null) {
             listOf(
                 UiCommand("edit", "Edit season", UiCommandMethod.GET, editHref),
@@ -32,6 +39,7 @@ fun seasonDetailManifest(title: String, editHref: String? = null): UiManifest =
             emptyList()
         },
     )
+}
 
 internal fun seasonReadManifest(
     id: String,

@@ -60,6 +60,9 @@ internal fun seasonDetailResponse(season: Season, canUpdate: Boolean): SeasonDet
             fromYear = season.fromYear,
         ),
         context = seasonDetailContext(season.tournament),
+        included = mapOf(
+            "tournament" to listOf(mapOf("id" to season.tournament.id, "name" to season.tournament.name)),
+        ),
     )
 
 internal fun seasonDetailContext(tournament: Tournament): SeasonDetailContext =

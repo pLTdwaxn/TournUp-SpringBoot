@@ -67,6 +67,7 @@ class SeasonCreateControllerTests(
             tournament = SeasonTournamentContext(tournamentId, "Winter Open", "/api/tournaments/$tournamentId/"),
             collectionHref = "/api/tournaments/$tournamentId/seasons/",
         ),
+        included = mapOf("tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open"))),
     )
 
     @ParameterizedTest
@@ -129,7 +130,12 @@ class SeasonCreateControllerTests(
             jsonPath("$.manifest.resource", equalTo("season"))
             jsonPath("$.manifest.operation", equalTo("read"))
             jsonPath("$.manifest.layout.type", equalTo("detail"))
-            jsonPath("$.manifest.layout.sections[0].fields", contains("fromYear", "name", "slug"))
+            jsonPath("$.manifest.layout.sections[0].fields", contains("tournamentId", "fromYear", "name", "slug"))
+            jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
+            jsonPath("$.manifest.fields.tournamentId.widget", equalTo("display"))
+            jsonPath("$.manifest.fields.tournamentId.editable", equalTo(false))
+            jsonPath("$.included.tournament[0].id", equalTo(tournamentId.toString()))
+            jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
             jsonPath("$.manifest.fields.fromYear.dataType", equalTo("integer"))
             jsonPath("$.manifest.fields.fromYear.widget", equalTo("display"))
             jsonPath("$.manifest.fields.name.editable", equalTo(false))

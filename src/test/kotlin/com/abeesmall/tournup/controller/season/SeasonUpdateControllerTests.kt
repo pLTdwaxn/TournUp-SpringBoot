@@ -114,6 +114,10 @@ class SeasonUpdateControllerTests(
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.manifest.operation", equalTo("read"))
+                jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
+                jsonPath("$.manifest.fields.tournamentId.widget", equalTo("display"))
+                jsonPath("$.included.tournament[0].id", equalTo(tournament.id.toString()))
+                jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
                 jsonPath("$.manifest.title", equalTo("Summer league"))
                 jsonPath("$.manifest.commands[0].href", equalTo("${shallowUrl}edit/"))
                 jsonPath("$.item.id", equalTo(existing.id.toString()))
