@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.ui
 
-import com.abeesmall.tournup.manifest.tournament.tournamentCreateFieldCatalogue
+import com.abeesmall.tournup.manifest.tournament.tournamentFieldCatalogue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -55,7 +55,7 @@ class LayoutValidationTests {
             setOf("unknownField", "madeUpField"),
             unknownLayoutFieldIds(
                 definition,
-                tournamentCreateFieldCatalogue().keys,
+                tournamentFieldCatalogue().keys,
             ),
         )
     }
@@ -85,7 +85,7 @@ class LayoutValidationTests {
             setOf("name", "participantType"),
             incompatibleWidgetFieldIds(
                 definition,
-                tournamentCreateFieldCatalogue()
+                tournamentFieldCatalogue()
                     .mapValues { it.value.dataType }
             ),
         )
@@ -110,7 +110,7 @@ class LayoutValidationTests {
             ),
         )
 
-        val requiredWithoutDefaults = tournamentCreateFieldCatalogue()
+        val requiredWithoutDefaults = tournamentFieldCatalogue()
             .filterValues { it.required && it.defaultValue == null }
             .keys
 
@@ -185,7 +185,7 @@ class LayoutValidationTests {
                 "orphan" to FieldPresentation("Orphan", UiWidget.TEXT),
             ),
         )
-        val catalogue = tournamentCreateFieldCatalogue()
+        val catalogue = tournamentFieldCatalogue()
 
         val report = validateLayoutDefinition(
             definition,
@@ -224,7 +224,7 @@ class LayoutValidationTests {
                 "orphan" to FieldPresentation("Orphan", UiWidget.DISPLAY),
             ),
         )
-        val catalogue = tournamentCreateFieldCatalogue()
+        val catalogue = tournamentFieldCatalogue()
 
         val report = validateLayoutDefinition(
             definition,

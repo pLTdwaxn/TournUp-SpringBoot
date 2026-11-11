@@ -3,6 +3,7 @@ package com.abeesmall.tournup.controller.ui
 import com.abeesmall.tournup.auth.AuthenticatedUser
 import com.abeesmall.tournup.service.ui.UiResourceCatalogueService
 import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
+import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.resource.UiResourceConfiguration
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
 import com.abeesmall.tournup.security.SecurityConfiguration
@@ -39,6 +40,23 @@ class UiResourceCatalogueControllerTests(
     private val path = "/api/ui/resources/"
     private val tenantId = UUID.randomUUID()
     private val userId = UUID.randomUUID()
+
+    @Test
+    fun `audit capability requires explicit registration and user permission`() {
+        for (audited in listOf(false, true)) {
+            val registration = UiResourceConfiguration().tournamentUiResource().copy(audited = audited)
+            val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration)))
+            for (role in listOf("PLAYER", "SUPER_ADMIN")) {
+                val authentication = viewer(role)
+                val catalogue = service.catalogue(
+                    UiApplication.TOURNAMENT_MANAGER,
+                    authentication,
+                    authentication.principal as AuthenticatedUser,
+                )
+                assertEquals(audited && role == "SUPER_ADMIN", catalogue.resources.single().canReadLastAudit)
+            }
+        }
+    }
 
     @Test
     fun `requires an authenticated session`() {
@@ -89,7 +107,7 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[0].fields.length()", equalTo(4))
             jsonPath("$.resources[0].fields.tournamentId.dataType", equalTo("reference"))
             jsonPath("$.resources[0].fields.tournamentId.reference.resource", equalTo("tournament"))
-            jsonPath("$.resources[0].fields.tournamentId.reference.lookupOperation", equalTo("list"))
+            jsonPath("$.resources[0].fields.tournamentId.reference.lookupOperation", equalTo("lookup"))
             jsonPath("$.resources[0].fields.tournamentId.reference.resolveOperation", equalTo("read"))
             jsonPath("$.resources[0].fields.fromYear.dataType", equalTo("integer"))
             jsonPath("$.resources[0].fields.fromYear.required", equalTo(true))
@@ -122,7 +140,7 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[1].canReadLastAudit", equalTo(true))
             jsonPath(
                 "$.resources[0].operations[*].id",
-                contains("list", "list-in-tournament", "read", "read-by-slug", "create-form", "create", "edit-form", "update", "naming-context"),
+                contains("list", "list-in-tournament", "read", "read-by-slug", "create-form", "create", "edit-form", "update", "naming-context", "lookup"),
             )
             jsonPath("$.resources[0].operations[4].href", equalTo("/api/seasons/create/"))
             jsonPath("$.resources[0].operations[4].requiredContext.length()", equalTo(0))
@@ -132,7 +150,7 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[0].operations[7].method", equalTo("PUT"))
             jsonPath(
                 "$.resources[1].operations[*].id",
-                contains("list", "read", "read-by-slug", "create-form", "create", "edit-form", "update"),
+                contains("list", "read", "read-by-slug", "create-form", "create", "edit-form", "update", "lookup"),
             )
         }
     }
@@ -147,8 +165,8 @@ class UiResourceCatalogueControllerTests(
             status { isOk() }
             jsonPath("$.resources[0].canReadLastAudit", equalTo(false))
             jsonPath("$.resources[1].canReadLastAudit", equalTo(false))
-            jsonPath("$.resources[0].operations[*].id", contains("list", "list-in-tournament", "read", "read-by-slug"))
-            jsonPath("$.resources[1].operations[*].id", contains("list", "read", "read-by-slug"))
+            jsonPath("$.resources[0].operations[*].id", contains("list", "list-in-tournament", "read", "read-by-slug", "lookup"))
+            jsonPath("$.resources[1].operations[*].id", contains("list", "read", "read-by-slug", "lookup"))
         }
     }
 

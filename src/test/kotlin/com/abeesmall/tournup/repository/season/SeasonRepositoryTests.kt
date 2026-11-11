@@ -2,6 +2,7 @@ package com.abeesmall.tournup.repository.season
 
 import com.abeesmall.tournup.TestcontainersConfiguration
 import com.abeesmall.tournup.model.season.Season
+import com.abeesmall.tournup.service.LookupQuery
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
@@ -52,6 +53,19 @@ class SeasonRepositoryTests {
 
     @Autowired
     lateinit var transactionManager: PlatformTransactionManager
+
+    @Test
+    fun `lookup search stays within its selected tournament`() {
+        val parent = newTournament()
+        val other = newTournament()
+        val prefix = "lookup-${UUID.randomUUID()}"
+        val expected = seasons.saveAndFlush(newSeason(parent, name = "$prefix A", slug = "lookup-a"))
+        seasons.saveAndFlush(newSeason(other, name = "$prefix B", slug = "lookup-b"))
+        val query = LookupQuery.parse("season:${parent.id}", prefix, 20, null)
+        val result = query.response(seasons.lookup(query.pattern, query.afterName, query.afterId, parent.id, query.pageable))
+        assertEquals(listOf(expected.id), result.items.map { it.id })
+        assertNull(result.nextCursor)
+    }
 
     @Test
     fun `saves minimal season fields and looks up within its tournament`() {

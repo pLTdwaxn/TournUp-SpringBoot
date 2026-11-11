@@ -1,0 +1,84 @@
+{
+  "manifest": {
+    "contractVersion": 1,
+    "id": "season-detail",
+    "application": "tournament-manager",
+    "resource": "season",
+    "operation": "read",
+    "title": "2026 S1",
+    "layout": {
+      "type": "detail",
+      "sections": [
+        {
+          "id": "details",
+          "title": "Details",
+          "fields": [
+            "tournamentId",
+            "fromYear",
+            "name",
+            "slug"
+          ]
+        }
+      ]
+    },
+    "fields": {
+      "tournamentId": {
+        "label": "Tournament",
+        "dataType": "reference",
+        "widget": "display",
+        "editable": false,
+        "reference": {
+          "resource": "tournament",
+          "lookupOperation": "lookup",
+          "resolveOperation": "read"
+        }
+      },
+      "fromYear": {
+        "label": "From year",
+        "dataType": "integer",
+        "widget": "display",
+        "editable": false
+      },
+      "name": {
+        "label": "Name",
+        "dataType": "string",
+        "widget": "display",
+        "editable": false
+      },
+      "slug": {
+        "label": "Slug",
+        "dataType": "string",
+        "widget": "display",
+        "editable": false
+      }
+    },
+    "commands": [
+      {
+        "id": "edit",
+        "label": "Edit season",
+        "method": "GET",
+        "href": "/api/seasons/00000000-0000-4000-8000-000000000002/edit/"
+      }
+    ]
+  },
+  "item": {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "tournamentId": "00000000-0000-4000-8000-000000000001",
+    "name": "2026 S1",
+    "slug": "2026-s1",
+    "fromYear": 2026,
+    "lastAudit": {
+      "revision": 12,
+      "timestamp": "2026-11-11T00:00:00Z",
+      "actorId": "00000000-0000-4000-8000-000000000003"
+    }
+  },
+  "included": {
+    "tournament": [
+      {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "Winter Open"
+      }
+    ]
+  }
+}

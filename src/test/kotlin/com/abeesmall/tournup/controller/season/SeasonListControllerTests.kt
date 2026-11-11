@@ -7,7 +7,7 @@ import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.season.SeasonListService
+import com.abeesmall.tournup.service.season.SeasonService
 import java.time.Instant
 import java.util.UUID
 import org.hamcrest.Matchers.contains
@@ -34,8 +34,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 
-@WebMvcTest(SeasonListController::class)
-@Import(SecurityConfiguration::class, SeasonListService::class)
+@WebMvcTest(SeasonController::class)
+@Import(SecurityConfiguration::class, SeasonService::class)
 class SeasonListControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {

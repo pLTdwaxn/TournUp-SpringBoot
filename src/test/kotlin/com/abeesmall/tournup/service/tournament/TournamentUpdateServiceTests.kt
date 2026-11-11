@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.service.tournament
 
+import com.abeesmall.tournup.ui.PublishedUiLayoutReader
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
 import com.abeesmall.tournup.model.tournament.HandicapMode
@@ -24,7 +25,7 @@ import org.springframework.dao.DataIntegrityViolationException
 
 class TournamentUpdateServiceTests {
     private val tournaments = mock(TournamentRepository::class.java)
-    private val service = TournamentUpdateService(tournaments)
+    private val service = TournamentService(tournaments, mock(PublishedUiLayoutReader::class.java))
 
     private val existing = Tournament(
         slug = "original",

@@ -13,12 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice(
-    assignableTypes = [
-        SeasonCreateController::class,
-        SeasonListController::class,
-        SeasonUpdateController::class,
-        SeasonDetailController::class,
-    ],
+    assignableTypes = [SeasonController::class],
 )
 class SeasonExceptionHandler {
     @ExceptionHandler(SeasonTournamentChangeException::class)

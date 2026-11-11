@@ -35,16 +35,16 @@ class UiResourceRegistryTests {
     private class Unmarked
 
     @Test
-    fun `registers only explicitly supplied annotated models`() {
+    fun `registers only explicitly supplied annotated DTOs`() {
         val registry = UiResourceRegistry(listOf(registration(First::class.java)))
 
         assertEquals(setOf("sample"), registry.resources.keys)
-        assertEquals(First::class.java, registry.resources.getValue("sample").modelClass)
+        assertEquals(First::class.java, registry.resources.getValue("sample").resourceClass)
         assertEquals("samples", registry.resources.getValue("sample").pluralName)
     }
 
     @Test
-    fun `plural names come from model metadata including irregular plurals`() {
+    fun `plural names come from DTO metadata including irregular plurals`() {
         val registry = UiResourceRegistry(listOf(registration(Person::class.java)))
 
         assertEquals("people", registry.resources.getValue("person").pluralName)
@@ -74,7 +74,7 @@ class UiResourceRegistryTests {
     }
 
     @Test
-    fun `unmarked models cannot be registered`() {
+    fun `unmarked DTOs cannot be registered`() {
         assertFailsWith<IllegalArgumentException> {
             UiResourceRegistry(listOf(registration(Unmarked::class.java)))
         }
@@ -101,7 +101,8 @@ class UiResourceRegistryTests {
     }
 
     private fun registration(model: Class<*>): UiResourceRegistration = UiResourceRegistration(
-        modelClass = model,
+        resourceClass = model,
+        audited = false,
         applications = setOf(UiApplication.TOURNAMENT_MANAGER),
         label = "Samples",
         displayField = null,

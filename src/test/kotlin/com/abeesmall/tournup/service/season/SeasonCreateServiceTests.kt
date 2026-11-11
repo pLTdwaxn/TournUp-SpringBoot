@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.service.season
 
-import com.abeesmall.tournup.dto.season.SeasonCreateRequest
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.model.season.Season
@@ -33,9 +33,9 @@ class SeasonCreateServiceTests {
     private val tournaments = mock(TournamentRepository::class.java)
     private val seasons = mock(SeasonRepository::class.java)
     private val validatorFactory = Validation.buildDefaultValidatorFactory()
-    private val service = SeasonCreateService(tournaments, seasons, validatorFactory.validator)
+    private val service = SeasonService(tournaments, seasons, validatorFactory.validator)
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")
-    private val request = SeasonCreateRequest(name = "2026 S4", slug = "2026-s4", fromYear = 2026, tournamentId = tournament.id)
+    private val request = SeasonWriteRequest(name = "2026 S4", slug = "2026-s4", fromYear = 2026, tournamentId = tournament.id)
 
     @AfterEach
     fun closeValidatorFactory() {
@@ -74,7 +74,7 @@ class SeasonCreateServiceTests {
     fun `unselected form does not query records or choose a tournament`() {
         val response = service.form(UiApplication.TOURNAMENT_MANAGER, null)
 
-        assertEquals(SeasonCreateRequest("", "", null, null), response.item)
+        assertEquals(SeasonWriteRequest("", "", null, null), response.item)
         assertEquals(emptyMap(), response.included)
         verifyNoInteractions(tournaments, seasons)
     }
@@ -138,8 +138,6 @@ class SeasonCreateServiceTests {
             SeasonData(saved.id, tournament.id, custom.name, custom.slug, 2026),
             response.item,
         )
-        assertEquals(tournament.id, response.context.tournament.id)
-        assertEquals(tournament.name, response.context.tournament.name)
         assertEquals(
             mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
             response.included,

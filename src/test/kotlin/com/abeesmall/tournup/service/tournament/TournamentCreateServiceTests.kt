@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.service.tournament
 
+import com.abeesmall.tournup.ui.PublishedUiLayoutReader
 import com.abeesmall.tournup.dto.tournament.TournamentCreateRequest
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.model.tournament.HandicapMode
@@ -23,7 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException
 
 class TournamentCreateServiceTests {
     private val tournaments = mock(TournamentRepository::class.java)
-    private val service = TournamentCreateService(tournaments)
+    private val service = TournamentService(tournaments, mock(PublishedUiLayoutReader::class.java))
 
     private val request = TournamentCreateRequest(
         name = "Winter Open",

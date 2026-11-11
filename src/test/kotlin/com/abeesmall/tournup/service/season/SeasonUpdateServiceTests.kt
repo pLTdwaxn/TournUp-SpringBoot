@@ -1,7 +1,8 @@
 package com.abeesmall.tournup.service.season
 
+import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.dto.season.SeasonData
-import com.abeesmall.tournup.dto.season.SeasonUpdateRequest
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
@@ -31,7 +32,7 @@ import org.springframework.dao.DataIntegrityViolationException
 class SeasonUpdateServiceTests {
     private val seasons = mock(SeasonRepository::class.java)
     private val validatorFactory = Validation.buildDefaultValidatorFactory()
-    private val service = SeasonUpdateService(seasons, validatorFactory.validator)
+    private val service = SeasonService(mock(TournamentRepository::class.java), seasons, validatorFactory.validator)
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")
     private val existing = Season(
         tournament = tournament,
@@ -39,7 +40,7 @@ class SeasonUpdateServiceTests {
         slug = "2026-s1",
         fromYear = 2026,
     )
-    private val request = SeasonUpdateRequest("Summer league", "summer-league", 2027, tournament.id)
+    private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.id)
 
     @AfterEach
     fun closeValidatorFactory() {
@@ -61,7 +62,6 @@ class SeasonUpdateServiceTests {
             SeasonData(existing.id, tournament.id, request.name, request.slug, 2027),
             result.item,
         )
-        assertEquals(tournament.name, result.context.tournament.name)
         assertEquals(
             mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
             result.included,
@@ -79,7 +79,7 @@ class SeasonUpdateServiceTests {
 
         val response = assertNotNull(service.form(existing.id))
 
-        assertEquals(SeasonUpdateRequest("2026 S1", "2026-s1", 2026, tournament.id), response.item)
+        assertEquals(SeasonWriteRequest("2026 S1", "2026-s1", 2026, tournament.id), response.item)
         assertEquals(
             mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
             response.included,
@@ -90,8 +90,6 @@ class SeasonUpdateServiceTests {
         for (field in listOf("fromYear", "name", "slug")) {
             assertEquals(true, response.manifest.fields.getValue(field).editable)
         }
-        assertEquals(tournament.id, response.context.tournament.id)
-        assertEquals(tournament.name, response.context.tournament.name)
         assertEquals("/api/seasons/${existing.id}/", response.manifest.commands.single().href)
         assertEquals(emptyList(), response.manifest.fields.getValue("name").behaviours)
         assertEquals(emptyList(), response.manifest.fields.getValue("slug").behaviours)
@@ -127,7 +125,7 @@ class SeasonUpdateServiceTests {
 
     @Test
     fun `allows changing the year while keeping the current name and slug`() {
-        val unchanged = SeasonUpdateRequest(existing.name, existing.slug, 2027, tournament.id)
+        val unchanged = SeasonWriteRequest(existing.name, existing.slug, 2027, tournament.id)
         whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
         whenever(seasons.saveAndFlush(existing)).thenReturn(existing)
 

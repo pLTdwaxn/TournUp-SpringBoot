@@ -9,7 +9,6 @@ import com.abeesmall.tournup.security.canViewLastAudit
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
-import org.hibernate.envers.Audited
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
 
@@ -50,7 +49,7 @@ class UiResourceCatalogueService(private val registry: UiResourceRegistry) {
                     operations = definition.operations.filter {
                         it.operation !in setOf(UiOperation.CREATE, UiOperation.UPDATE) || canWrite
                     },
-                    canReadLastAudit = definition.modelClass.isAnnotationPresent(Audited::class.java) &&
+                    canReadLastAudit = definition.audited &&
                         canViewLastAudit(authentication),
                 )
             },

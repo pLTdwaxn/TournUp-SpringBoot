@@ -7,7 +7,7 @@ import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.season.SeasonDetailService
+import com.abeesmall.tournup.service.season.SeasonService
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -31,8 +31,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
-@WebMvcTest(SeasonDetailController::class)
-@Import(SecurityConfiguration::class, SeasonDetailService::class)
+@WebMvcTest(SeasonController::class)
+@Import(SecurityConfiguration::class, SeasonService::class)
 class SeasonDetailControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {
@@ -60,7 +60,8 @@ class SeasonDetailControllerTests(
     fun `retired nested create form cannot fall through to a slug lookup`() {
         for (parent in listOf(tournament.id.toString(), tournament.slug)) {
             mockMvc.get("/api/tournaments/$parent/seasons/create/").andExpect {
-                status { isNotFound() }
+                // The merged controller's PUT item mapping matches this path shape.
+                status { isMethodNotAllowed() }
             }
         }
         verifyNoInteractions(seasons, tournaments, auditReader)
@@ -166,8 +167,10 @@ class SeasonDetailControllerTests(
             jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
             jsonPath("$.manifest.fields.tournamentId.widget", equalTo("display"))
             jsonPath("$.manifest.fields.tournamentId.editable", equalTo(false))
+            jsonPath("$.manifest.fields.tournamentId.required") { doesNotHaveJsonPath() }
+            jsonPath("$.context") { doesNotHaveJsonPath() }
             jsonPath("$.manifest.fields.tournamentId.reference.resource", equalTo("tournament"))
-            jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("list"))
+            jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("lookup"))
             jsonPath("$.manifest.fields.tournamentId.reference.resolveOperation", equalTo("read"))
             jsonPath("$.included.tournament[0].id", equalTo(tournament.id.toString()))
             jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
@@ -188,10 +191,7 @@ class SeasonDetailControllerTests(
             jsonPath("$.item.name", equalTo("2026 S1"))
             jsonPath("$.item.slug", equalTo("2026-s1"))
             jsonPath("$.item.fromYear", equalTo(2026))
-            jsonPath("$.context.tournament.id", equalTo(tournament.id.toString()))
-            jsonPath("$.context.tournament.name", equalTo("Winter Open"))
-            jsonPath("$.context.tournament.href", equalTo("/api/tournaments/${tournament.id}/"))
-            jsonPath("$.context.collectionHref", equalTo("/api/tournaments/${tournament.id}/seasons/"))
+            jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
         }
         verify(seasons).findById(season.id)
         verifyNoMoreInteractions(seasons)
@@ -257,7 +257,7 @@ class SeasonDetailControllerTests(
             status { isOk() }
             jsonPath("$.item.id", equalTo(season.id.toString()))
             jsonPath("$.item.tournamentId", equalTo(tournament.id.toString()))
-            jsonPath("$.context.tournament.name", equalTo("Winter Open"))
+            jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
             jsonPath("$.item.lastAudit") { doesNotHaveJsonPath() }
         }
 
@@ -368,7 +368,7 @@ class SeasonDetailControllerTests(
                 jsonPath("$.item.id", equalTo(expected.id.toString()))
                 jsonPath("$.item.name", equalTo(expected.name))
                 jsonPath("$.item.tournamentId", equalTo(parent.id.toString()))
-                jsonPath("$.context.tournament.name", equalTo(parent.name))
+                jsonPath("$.included.tournament[0].name", equalTo(parent.name))
                 jsonPath("$.item.lastAudit") { doesNotHaveJsonPath() }
             }
             verify(seasons).findByTournamentIdAndSlug(parent.id, season.slug)

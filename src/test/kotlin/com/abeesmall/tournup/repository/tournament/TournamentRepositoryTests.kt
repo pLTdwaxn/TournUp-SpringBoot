@@ -2,6 +2,9 @@ package com.abeesmall.tournup.repository.tournament
 
 import com.abeesmall.tournup.TestcontainersConfiguration
 import com.abeesmall.tournup.model.tournament.Tournament
+import com.abeesmall.tournup.service.LookupQuery
+import java.util.UUID
+import kotlin.test.assertNull
 import jakarta.persistence.EntityManager
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -24,6 +27,22 @@ class TournamentRepositoryTests {
 
     @Autowired
     lateinit var entityManager: EntityManager
+
+    @Test
+    fun `lookup projects display fields and continues through duplicate names`() {
+        val prefix = "lookup-${UUID.randomUUID()}"
+        val records = listOf("A", "A", "B").map { suffix ->
+            repository.saveAndFlush(Tournament(slug = "lookup-${UUID.randomUUID()}", name = "$prefix $suffix"))
+        }
+        entityManager.clear()
+        val first = LookupQuery.parse("tournament", prefix, 2, null)
+        val batch = first.response(repository.lookup(first.pattern, first.afterName, first.afterId, first.pageable))
+        assertEquals(records.take(2).map { it.id }.toSet(), batch.items.map { it.id }.toSet())
+        val next = LookupQuery.parse("tournament", prefix, 2, assertNotNull(batch.nextCursor))
+        val last = next.response(repository.lookup(next.pattern, next.afterName, next.afterId, next.pageable))
+        assertEquals(listOf(records.last().id), last.items.map { it.id })
+        assertNull(last.nextCursor)
+    }
 
     @Test
     fun `saves and finds a tournament by slug`() {

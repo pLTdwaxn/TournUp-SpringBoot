@@ -1,13 +1,14 @@
 package com.abeesmall.tournup.controller.season
 
+import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.dto.audit.LastAuditData
-import com.abeesmall.tournup.dto.season.SeasonUpdateRequest
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.season.SeasonUpdateService
+import com.abeesmall.tournup.service.season.SeasonService
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -36,12 +37,15 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(SeasonUpdateController::class)
-@Import(SecurityConfiguration::class, SeasonUpdateService::class)
+@WebMvcTest(SeasonController::class)
+@Import(SecurityConfiguration::class, SeasonService::class)
 class SeasonUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
 ) {
+    @MockitoBean
+    private lateinit var tournaments: TournamentRepository
+
     @MockitoBean
     private lateinit var seasons: SeasonRepository
 
@@ -52,7 +56,7 @@ class SeasonUpdateControllerTests(
     private val existing = Season(
         tournament = tournament, name = "2026 S1", slug = "2026-s1", fromYear = 2026,
     )
-    private val request = SeasonUpdateRequest("Summer league", "summer-league", 2027, tournament.id)
+    private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.id)
     private val shallowUrl = "/api/seasons/${existing.id}/"
     private val urls = listOf(shallowUrl, "/api/tournaments/${tournament.id}/seasons/${existing.id}/")
 
@@ -67,6 +71,7 @@ class SeasonUpdateControllerTests(
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.manifest.operation", equalTo("update"))
+                jsonPath("$.context") { doesNotHaveJsonPath() }
                 jsonPath("$.manifest.layout.type", equalTo("form"))
                 jsonPath("$.manifest.layout.sections[0].fields", contains("tournamentId", "fromYear", "name", "slug"))
                 jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
@@ -74,22 +79,21 @@ class SeasonUpdateControllerTests(
                 jsonPath("$.manifest.fields.tournamentId.required", equalTo(true))
                 jsonPath("$.manifest.fields.tournamentId.editable", equalTo(false))
                 jsonPath("$.manifest.fields.tournamentId.reference.resource", equalTo("tournament"))
-                jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("list"))
+                jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("lookup"))
                 jsonPath("$.manifest.fields.tournamentId.reference.resolveOperation", equalTo("read"))
                 jsonPath("$.item.tournamentId", equalTo(tournament.id.toString()))
                 jsonPath("$.included.tournament[0].id", equalTo(tournament.id.toString()))
                 jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
                 jsonPath("$.manifest.fields.fromYear.widget", equalTo("number"))
                 jsonPath("$.manifest.fields.fromYear.required", equalTo(true))
-                jsonPath("$.manifest.fields.name.behaviours.length()", equalTo(0))
-                jsonPath("$.manifest.fields.slug.behaviours.length()", equalTo(0))
+                jsonPath("$.manifest.fields.name.behaviours") { doesNotHaveJsonPath() }
+                jsonPath("$.manifest.fields.slug.behaviours") { doesNotHaveJsonPath() }
                 jsonPath("$.manifest.commands[0].method", equalTo("PUT"))
                 jsonPath("$.manifest.commands[0].href", equalTo(shallowUrl))
                 jsonPath("$.item.name", equalTo("2026 S1"))
                 jsonPath("$.item.slug", equalTo("2026-s1"))
                 jsonPath("$.item.fromYear", equalTo(2026))
-                jsonPath("$.context.tournament.id", equalTo(tournament.id.toString()))
-                jsonPath("$.context.tournament.name", equalTo("Winter Open"))
+                jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
             }
         }
         verifyNoInteractions(auditReader)
@@ -127,8 +131,7 @@ class SeasonUpdateControllerTests(
                 jsonPath("$.item.fromYear", equalTo(2027))
                 jsonPath("$.item.lastAudit.revision", equalTo(43))
                 jsonPath("$.item.lastAudit.actorId", equalTo(actorId.toString()))
-                jsonPath("$.context.tournament.name", equalTo("Winter Open"))
-                jsonPath("$.context.collectionHref", equalTo("/api/tournaments/${tournament.id}/seasons/"))
+                jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
             }
         }
         verify(seasons, times(2)).saveAndFlush(existing)

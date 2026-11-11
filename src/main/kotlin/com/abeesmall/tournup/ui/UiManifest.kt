@@ -1,6 +1,7 @@
 package com.abeesmall.tournup.ui
 
 import com.fasterxml.jackson.annotation.JsonValue
+import com.fasterxml.jackson.annotation.JsonInclude
 
 data class UiManifest(
     val contractVersion: Int,
@@ -14,9 +15,12 @@ data class UiManifest(
     val commands: List<UiCommand>,
 )
 
+// Absent sections or columns mean an empty list for that layout property.
 data class UiLayout(
     val type: UiLayoutType,
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val sections: List<UiSection> = emptyList(),
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val columns: List<String> = emptyList(),
 )
 
@@ -26,13 +30,18 @@ data class UiSection(
     val fields: List<String>,
 )
 
+// Absent options/behaviours mean empty lists. Required is emitted only for forms;
+// nullable constraints and reference metadata are omitted when inapplicable.
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class UiField(
     val label: String,
     val dataType: UiDataType,
     val widget: UiWidget,
-    val required: Boolean = false,
+    val required: Boolean? = null,
     val editable: Boolean = true,
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val options: List<UiOption> = emptyList(),
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val behaviours: List<UiBehaviour> = emptyList(),
     val maxLength: Int? = null,
     val pattern: String? = null,
@@ -44,6 +53,7 @@ data class UiOption(
     val label: String,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class UiBehaviour(
     val type: UiBehaviourType,
     val dependsOn: List<String>,

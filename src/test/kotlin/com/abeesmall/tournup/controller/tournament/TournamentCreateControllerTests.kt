@@ -1,16 +1,27 @@
 package com.abeesmall.tournup.controller.tournament
 
-import com.abeesmall.tournup.dto.tournament.TOURNAMENT_NAME_MAX_LENGTH
-import com.abeesmall.tournup.dto.tournament.TOURNAMENT_SLUG_PATTERN
+import com.abeesmall.tournup.dto.audit.LastAuditData
+import com.abeesmall.tournup.model.tournament.Tournament
+import java.time.Instant
+import org.mockito.Mockito.inOrder
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.dto.ui.UiRecordResponse
+
+import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiManifestContext
+import com.abeesmall.tournup.ui.UiManifestResolver
+import com.abeesmall.tournup.ui.UiOperation
+
+import com.abeesmall.tournup.validation.RESOURCE_NAME_MAX_LENGTH
+import com.abeesmall.tournup.validation.RESOURCE_SLUG_PATTERN
 import com.abeesmall.tournup.dto.tournament.TournamentCreateRequest
 import com.abeesmall.tournup.dto.tournament.TournamentData
-import com.abeesmall.tournup.dto.tournament.TournamentDetailResponse
-import com.abeesmall.tournup.manifest.tournament.tournamentDetailManifest
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.tournament.TournamentCreateService
+import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.service.tournament.TournamentSlugConflictException
 import java.util.UUID
 import org.hamcrest.Matchers.contains
@@ -35,14 +46,17 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(TournamentCreateController::class)
+@WebMvcTest(TournamentController::class)
 @Import(SecurityConfiguration::class)
 class TournamentCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
 ) {
     @MockitoBean
-    private lateinit var service: TournamentCreateService
+    private lateinit var auditReader: LatestAuditReader
+
+    @MockitoBean
+    private lateinit var service: TournamentService
 
     private val validRequest = TournamentCreateRequest(
         name = "Winter Open",
@@ -104,11 +118,11 @@ class TournamentCreateControllerTests(
             jsonPath("$.manifest.fields.name.editable", equalTo(true))
             jsonPath(
                 "$.manifest.fields.name.maxLength",
-                equalTo(TOURNAMENT_NAME_MAX_LENGTH),
+                equalTo(RESOURCE_NAME_MAX_LENGTH),
             )
             jsonPath(
                 "$.manifest.fields.slug.pattern",
-                equalTo(TOURNAMENT_SLUG_PATTERN),
+                equalTo(RESOURCE_SLUG_PATTERN),
             )
             jsonPath("$.manifest.fields.description.widget", equalTo("textarea"))
             jsonPath("$.manifest.fields.participantType.widget", equalTo("select"))
@@ -135,8 +149,15 @@ class TournamentCreateControllerTests(
     )
     fun `writers can create a tournament`(role: String) {
         val id = UUID.randomUUID()
-        val response = TournamentDetailResponse(
-            manifest = tournamentDetailManifest(validRequest.name),
+        val response = UiRecordResponse(
+            manifest = UiManifestResolver.resolve(
+                tournamentResourceDefinition(),
+                UiManifestContext(
+                    UiApplication.TOURNAMENT_MANAGER,
+                    UiOperation.READ,
+                    title = validRequest.name,
+                ),
+            ),
             item = TournamentData(
                 id = id,
                 slug = validRequest.slug,
@@ -148,6 +169,10 @@ class TournamentCreateControllerTests(
             ),
         )
         whenever(service.create(validRequest)).thenReturn(response)
+        val actorId = UUID.randomUUID()
+        whenever(auditReader.findLatest(Tournament::class.java, listOf(id))).thenReturn(
+            mapOf(id to LastAuditData(42, Instant.parse("2026-11-12T00:00:00Z"), actorId)),
+        )
 
         mockMvc.post("/api/tournaments/") {
             with(user("writer").roles(role))
@@ -162,10 +187,15 @@ class TournamentCreateControllerTests(
             jsonPath("$.item.name", equalTo("Winter Open"))
             jsonPath("$.item.slug", equalTo("winter-open"))
             jsonPath("$.item.handicapMode", equalTo("CARRY_FORWARD"))
+            jsonPath("$.item.lastAudit.revision", equalTo(42))
+            jsonPath("$.item.lastAudit.timestamp", equalTo("2026-11-12T00:00:00Z"))
+            jsonPath("$.item.lastAudit.actorId", equalTo(actorId.toString()))
         }
 
-        verify(service).create(validRequest)
-        verifyNoMoreInteractions(service)
+        val ordered = inOrder(service, auditReader)
+        ordered.verify(service).create(validRequest)
+        ordered.verify(auditReader).findLatest(Tournament::class.java, listOf(id))
+        ordered.verifyNoMoreInteractions()
     }
 
     @ParameterizedTest

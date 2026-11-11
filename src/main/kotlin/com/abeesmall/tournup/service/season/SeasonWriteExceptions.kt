@@ -4,6 +4,7 @@ import java.util.UUID
 import org.hibernate.exception.ConstraintViolationException
 import org.springframework.dao.DataIntegrityViolationException
 
+
 class SeasonTournamentNotFoundException(tournamentId: UUID) :
     RuntimeException("Tournament not found: $tournamentId")
 

@@ -8,7 +8,7 @@ import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.tournament.TournamentListService
+import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.ui.FieldPresentation
 import com.abeesmall.tournup.ui.LayoutDefinition
 import com.abeesmall.tournup.ui.PublishedUiLayout
@@ -42,8 +42,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
-@WebMvcTest(TournamentListController::class)
-@Import(SecurityConfiguration::class, TournamentListService::class)
+@WebMvcTest(TournamentController::class)
+@Import(SecurityConfiguration::class, TournamentService::class)
 class TournamentListControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {

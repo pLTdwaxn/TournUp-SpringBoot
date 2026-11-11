@@ -1,17 +1,26 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.dto.audit.LastAuditData
+import com.abeesmall.tournup.model.tournament.Tournament
+import java.time.Instant
+import org.mockito.Mockito.inOrder
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.dto.ui.UiRecordResponse
+
+import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiManifestContext
+import com.abeesmall.tournup.ui.UiManifestResolver
+import com.abeesmall.tournup.ui.UiOperation
+
 import com.abeesmall.tournup.dto.tournament.TournamentData
-import com.abeesmall.tournup.dto.tournament.TournamentDetailResponse
-import com.abeesmall.tournup.dto.tournament.TournamentUpdateFormResponse
 import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
-import com.abeesmall.tournup.manifest.tournament.tournamentDetailManifest
-import com.abeesmall.tournup.manifest.tournament.tournamentUpdateManifest
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.tournament.TournamentSlugConflictException
-import com.abeesmall.tournup.service.tournament.TournamentUpdateService
+import com.abeesmall.tournup.service.tournament.TournamentService
 import java.util.UUID
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.greaterThan
@@ -34,14 +43,17 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(TournamentUpdateController::class)
+@WebMvcTest(TournamentController::class)
 @Import(SecurityConfiguration::class)
 class TournamentUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
 ) {
     @MockitoBean
-    private lateinit var service: TournamentUpdateService
+    private lateinit var auditReader: LatestAuditReader
+
+    @MockitoBean
+    private lateinit var service: TournamentService
 
     private val id = UUID.randomUUID()
     private val path = "/api/tournaments/$id/"
@@ -59,17 +71,35 @@ class TournamentUpdateControllerTests(
         strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"],
     )
     fun `writers can open the form and update the tournament`(role: String) {
+        val actorId = UUID.randomUUID()
+        whenever(auditReader.findLatest(Tournament::class.java, listOf(id))).thenReturn(
+            mapOf(id to LastAuditData(43, Instant.parse("2026-11-12T00:00:00Z"), actorId)),
+        )
         whenever(service.form(id)).thenReturn(
-            TournamentUpdateFormResponse(
-                manifest = tournamentUpdateManifest(id),
+            UiRecordResponse(
+                manifest = UiManifestResolver.resolve(
+                    tournamentResourceDefinition(),
+                    UiManifestContext(
+                        UiApplication.TOURNAMENT_MANAGER,
+                        UiOperation.UPDATE,
+                        allowedWrites = setOf(UiOperation.UPDATE),
+                        recordId = id.toString(),
+                    ),
+                ),
                 item = request,
             ),
         )
         whenever(service.update(id, request)).thenReturn(
-            TournamentDetailResponse(
-                manifest = tournamentDetailManifest(
-                    title = request.name,
-                    editHref = "${path}edit/",
+            UiRecordResponse(
+                manifest = UiManifestResolver.resolve(
+                    tournamentResourceDefinition(),
+                    UiManifestContext(
+                        UiApplication.TOURNAMENT_MANAGER,
+                        UiOperation.READ,
+                        title = request.name,
+                        allowedWrites = setOf(UiOperation.UPDATE),
+                        recordId = id.toString(),
+                    ),
                 ),
                 item = TournamentData(
                     id = id,
@@ -90,7 +120,7 @@ class TournamentUpdateControllerTests(
             jsonPath("$.manifest.operation", equalTo("update"))
             jsonPath("$.manifest.layout.type", equalTo("form"))
             jsonPath("$.manifest.fields.name.editable", equalTo(true))
-            jsonPath("$.manifest.fields.slug.behaviours.length()", equalTo(0))
+            jsonPath("$.manifest.fields.slug.behaviours") { doesNotHaveJsonPath() }
             jsonPath("$.manifest.commands[0].method", equalTo("PUT"))
             jsonPath("$.manifest.commands[0].href", equalTo(path))
             jsonPath("$.item.name", equalTo(request.name))
@@ -113,11 +143,16 @@ class TournamentUpdateControllerTests(
             jsonPath("$.item.participantType", equalTo("TEAM"))
             jsonPath("$.item.participationMode", equalTo("REGISTRATION"))
             jsonPath("$.item.handicapMode", equalTo("CARRY_FORWARD"))
+            jsonPath("$.item.lastAudit.revision", equalTo(43))
+            jsonPath("$.item.lastAudit.timestamp", equalTo("2026-11-12T00:00:00Z"))
+            jsonPath("$.item.lastAudit.actorId", equalTo(actorId.toString()))
         }
 
-        verify(service).form(id)
-        verify(service).update(id, request)
-        verifyNoMoreInteractions(service)
+        val ordered = inOrder(service, auditReader)
+        ordered.verify(service).form(id)
+        ordered.verify(service).update(id, request)
+        ordered.verify(auditReader).findLatest(Tournament::class.java, listOf(id))
+        ordered.verifyNoMoreInteractions()
     }
 
     @ParameterizedTest

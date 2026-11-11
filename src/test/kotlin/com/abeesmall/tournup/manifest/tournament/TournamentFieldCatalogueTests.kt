@@ -1,14 +1,34 @@
 package com.abeesmall.tournup.manifest.tournament
 
+import com.abeesmall.tournup.model.tournament.HandicapMode
+import com.abeesmall.tournup.model.tournament.ParticipantType
+import com.abeesmall.tournup.model.tournament.ParticipationMode
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class TournamentFieldCatalogueTests {
     @Test
+    fun `UI choices and validation values cover the same enum entries`() {
+        val fields = tournamentFieldCatalogue()
+        val expected = mapOf(
+            "participantType" to ParticipantType.entries.map { it.name },
+            "participationMode" to ParticipationMode.entries.map { it.name },
+            "handicapMode" to HandicapMode.entries.map { it.name },
+        )
+        for ((id, values) in expected) {
+            val field = fields.getValue(id)
+            assertEquals(values, field.allowedValues)
+            assertEquals(values, field.options.map { it.value })
+            assertTrue(field.options.all { it.label.isNotBlank() })
+        }
+    }
+
+    @Test
     fun `enum defaults are available choices`() {
-        val fields = tournamentCreateFieldCatalogue()
+        val fields = tournamentFieldCatalogue()
 
         for (id in listOf("participantType", "participationMode", "handicapMode")) {
             val field = assertNotNull(fields[id])

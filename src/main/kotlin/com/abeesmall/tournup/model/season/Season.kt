@@ -1,7 +1,6 @@
 package com.abeesmall.tournup.model.season
 
 import com.abeesmall.tournup.model.tournament.Tournament
-import com.abeesmall.tournup.ui.resource.UiResource
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -16,7 +15,6 @@ import java.util.UUID
 import org.hibernate.envers.Audited
 
 @Entity
-@UiResource(key = "season", pluralName = "seasons")
 @Table(
     name = "seasons",
     uniqueConstraints = [

@@ -1,21 +1,22 @@
 package com.abeesmall.tournup.controller.season
 
+import com.abeesmall.tournup.dto.ui.UiRecordResponse
+
+import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.ui.UiManifestContext
+import com.abeesmall.tournup.ui.UiManifestResolver
+import com.abeesmall.tournup.ui.UiOperation
+
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.season.SeasonNamingContext
-import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
-import com.abeesmall.tournup.dto.season.SeasonCreateRequest
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.season.SeasonData
-import com.abeesmall.tournup.dto.season.SeasonDetailContext
-import com.abeesmall.tournup.dto.season.SeasonDetailResponse
-import com.abeesmall.tournup.dto.season.SeasonTournamentContext
-import com.abeesmall.tournup.manifest.season.seasonCreateManifest
-import com.abeesmall.tournup.manifest.season.seasonDetailManifest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
-import com.abeesmall.tournup.service.season.SeasonCreateService
+import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.service.season.SeasonFieldConflictException
 import com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException
 import java.time.Instant
@@ -41,14 +42,14 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(SeasonCreateController::class)
+@WebMvcTest(SeasonController::class)
 @Import(SecurityConfiguration::class)
 class SeasonCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
 ) {
     @MockitoBean
-    private lateinit var service: SeasonCreateService
+    private lateinit var service: SeasonService
 
     @MockitoBean
     private lateinit var auditReader: LatestAuditReader
@@ -58,15 +59,20 @@ class SeasonCreateControllerTests(
     private val prefilledUrl = "$formUrl?tournamentId=$tournamentId"
     private val createUrl = "/api/seasons/"
     private val namingUrl = "/api/seasons/naming-context/?tournamentId=$tournamentId"
-    private val request = SeasonCreateRequest("2026 S4", "2026-s4", 2026, tournamentId)
+    private val request = SeasonWriteRequest("2026 S4", "2026-s4", 2026, tournamentId)
     private val created = SeasonData(UUID.randomUUID(), tournamentId, "2026 S4", "2026-s4", 2026)
-    private val createdResponse = SeasonDetailResponse(
-        manifest = seasonDetailManifest(created.name, editHref = "/api/seasons/${created.id}/edit/"),
-        item = created,
-        context = SeasonDetailContext(
-            tournament = SeasonTournamentContext(tournamentId, "Winter Open", "/api/tournaments/$tournamentId/"),
-            collectionHref = "/api/tournaments/$tournamentId/seasons/",
+    private val createdResponse = UiRecordResponse(
+        manifest = UiManifestResolver.resolve(
+            seasonResourceDefinition(),
+            UiManifestContext(
+                UiApplication.TOURNAMENT_MANAGER,
+                UiOperation.READ,
+                title = created.name,
+                allowedWrites = setOf(UiOperation.UPDATE),
+                recordId = created.id.toString(),
+            ),
         ),
+        item = created,
         included = mapOf("tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open"))),
     )
 
@@ -74,9 +80,16 @@ class SeasonCreateControllerTests(
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers receive a prefilled editable reference with the same lookup contract`(role: String) {
         whenever(service.form(UiApplication.TOURNAMENT_MANAGER, tournamentId)).thenReturn(
-            SeasonCreateFormResponse(
-                manifest = seasonCreateManifest(UiApplication.TOURNAMENT_MANAGER),
-                item = SeasonCreateRequest("", "", null, tournamentId),
+            UiRecordResponse(
+                manifest = UiManifestResolver.resolve(
+                    seasonResourceDefinition(),
+                    UiManifestContext(
+                        UiApplication.TOURNAMENT_MANAGER,
+                        UiOperation.CREATE,
+                        allowedWrites = setOf(UiOperation.CREATE),
+                    ),
+                ),
+                item = SeasonWriteRequest("", "", null, tournamentId),
                 included = mapOf(
                     "tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open")),
                 ),
@@ -98,7 +111,7 @@ class SeasonCreateControllerTests(
             jsonPath("$.manifest.fields.tournamentId.widget", equalTo("record-select"))
             jsonPath("$.manifest.fields.tournamentId.editable", equalTo(true))
             jsonPath("$.manifest.fields.tournamentId.reference.resource", equalTo("tournament"))
-            jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("list"))
+            jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("lookup"))
             jsonPath("$.manifest.fields.tournamentId.reference.resolveOperation", equalTo("read"))
             jsonPath("$.item.tournamentId", equalTo(tournamentId.toString()))
             jsonPath("$.included.tournament[0].id", equalTo(tournamentId.toString()))
@@ -146,9 +159,7 @@ class SeasonCreateControllerTests(
             jsonPath("$.item.name", equalTo(request.name))
             jsonPath("$.item.slug", equalTo(request.slug))
             jsonPath("$.item.fromYear", equalTo(2026))
-            jsonPath("$.context.tournament.id", equalTo(tournamentId.toString()))
-            jsonPath("$.context.tournament.name", equalTo("Winter Open"))
-            jsonPath("$.context.collectionHref", equalTo("/api/tournaments/$tournamentId/seasons/"))
+            jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
             jsonPath("$.item.lastAudit.revision", equalTo(42))
             jsonPath("$.item.lastAudit.timestamp", equalTo("2026-11-10T00:00:00Z"))
             jsonPath("$.item.lastAudit.actorId", equalTo(actorId.toString()))
@@ -315,7 +326,14 @@ class SeasonCreateControllerTests(
     @Test
     fun `form can be requested without selecting a tournament`() {
         whenever(service.form(UiApplication.TOURNAMENT_MANAGER, null)).thenReturn(
-            SeasonCreateFormResponse(seasonCreateManifest(UiApplication.TOURNAMENT_MANAGER)),
+            UiRecordResponse(UiManifestResolver.resolve(
+                seasonResourceDefinition(),
+                UiManifestContext(
+                    UiApplication.TOURNAMENT_MANAGER,
+                    UiOperation.CREATE,
+                    allowedWrites = setOf(UiOperation.CREATE),
+                ),
+            ), item = SeasonWriteRequest("", "", null, null)),
         )
 
         mockMvc.get(formUrl) {

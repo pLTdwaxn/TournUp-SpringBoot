@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.ui.PublishedUiLayoutReader
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
@@ -8,7 +9,7 @@ import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.tournament.TournamentDetailService
+import com.abeesmall.tournup.service.tournament.TournamentService
 
 import java.time.Instant
 import java.util.Optional
@@ -34,11 +35,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
-@WebMvcTest(TournamentDetailController::class)
-@Import(SecurityConfiguration::class, TournamentDetailService::class)
+@WebMvcTest(TournamentController::class)
+@Import(SecurityConfiguration::class, TournamentService::class)
 class TournamentDetailControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {
+    @MockitoBean
+    private lateinit var layouts: PublishedUiLayoutReader
+
     @MockitoBean
     private lateinit var tournaments: TournamentRepository
 

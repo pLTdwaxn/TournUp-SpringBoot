@@ -1,7 +1,13 @@
 package com.abeesmall.tournup.manifest.season
 
-import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
-import com.abeesmall.tournup.dto.season.SeasonCreateRequest
+import com.abeesmall.tournup.dto.ui.UiRecordResponse
+
+import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.ui.UiManifestContext
+import com.abeesmall.tournup.ui.UiManifestResolver
+import com.abeesmall.tournup.ui.UiOperation
+
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.ui.UiApplication
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -16,7 +22,14 @@ class SeasonCreateManifestTests {
 
     @Test
     fun `form defines an editable required reference before its dependent fields`() {
-        val json = mapper.readTree(mapper.writeValueAsString(seasonCreateManifest(application)))
+        val json = mapper.readTree(mapper.writeValueAsString(UiManifestResolver.resolve(
+            seasonResourceDefinition(),
+            UiManifestContext(
+                application,
+                UiOperation.CREATE,
+                allowedWrites = setOf(UiOperation.CREATE),
+            ),
+        )))
         assertEquals("tournament-manager", json.path("application").stringValue())
         assertEquals("create", json.path("operation").stringValue())
         assertEquals(
@@ -34,7 +47,7 @@ class SeasonCreateManifestTests {
         assertEquals("reference", reference.path("dataType").stringValue())
         assertEquals("record-select", reference.path("widget").stringValue())
         assertEquals("tournament", reference.path("reference").path("resource").stringValue())
-        assertEquals("list", reference.path("reference").path("lookupOperation").stringValue())
+        assertEquals("lookup", reference.path("reference").path("lookupOperation").stringValue())
         assertEquals("read", reference.path("reference").path("resolveOperation").stringValue())
         assertEquals("integer", fields.path("fromYear").path("dataType").stringValue())
         assertEquals("number", fields.path("fromYear").path("widget").stringValue())
@@ -46,7 +59,14 @@ class SeasonCreateManifestTests {
 
     @Test
     fun `behaviours declare reference and year dependencies without the old sourceField contract`() {
-        val json = mapper.readTree(mapper.writeValueAsString(seasonCreateManifest(application)))
+        val json = mapper.readTree(mapper.writeValueAsString(UiManifestResolver.resolve(
+            seasonResourceDefinition(),
+            UiManifestContext(
+                application,
+                UiOperation.CREATE,
+                allowedWrites = setOf(UiOperation.CREATE),
+            ),
+        )))
         val fields = json.path("fields")
         val name = fields.path("name").path("behaviours").path(0)
         val slug = fields.path("slug").path("behaviours").path(0)
@@ -65,9 +85,16 @@ class SeasonCreateManifestTests {
     @Test
     fun `prefilled values and included reference records leave the field definition unchanged`() {
         val id = UUID.randomUUID()
-        val empty = SeasonCreateFormResponse(seasonCreateManifest(application))
+        val empty = UiRecordResponse(UiManifestResolver.resolve(
+            seasonResourceDefinition(),
+            UiManifestContext(
+                application,
+                UiOperation.CREATE,
+                allowedWrites = setOf(UiOperation.CREATE),
+            ),
+        ), item = SeasonWriteRequest("", "", null, null))
         val selected = empty.copy(
-            item = SeasonCreateRequest("", "", null, id),
+            item = SeasonWriteRequest("", "", null, id),
             included = mapOf("tournament" to listOf(mapOf("id" to id, "name" to "Winter Open"))),
         )
         assertEquals(empty.manifest, selected.manifest)
