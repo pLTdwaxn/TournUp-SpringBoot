@@ -31,6 +31,7 @@ class UiResourceCatalogueService(private val registry: UiResourceRegistry) {
                 val canWrite = definition.canWrite(authentication)
                 UiResourceDescriptor(
                     key = key,
+                    pluralName = definition.pluralName,
                     label = definition.label,
                     displayField = definition.displayField,
                     fields = definition.fields.mapValues { (_, field) ->

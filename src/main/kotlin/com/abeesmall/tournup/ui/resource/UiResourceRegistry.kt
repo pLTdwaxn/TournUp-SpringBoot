@@ -19,18 +19,29 @@ data class UiResourceRegistration(
     val operations: List<UiResourceOperation>,
     val canRead: (Authentication) -> Boolean,
     val canWrite: (Authentication) -> Boolean,
-)
+) {
+    val pluralName: String
+        get() = requireNotNull(modelClass.getAnnotation(UiResource::class.java)) {
+            "Missing @UiResource on ${modelClass.name}"
+        }.pluralName
+}
 
 @Component
 class UiResourceRegistry(registrations: List<UiResourceRegistration>) {
     // Registration is explicit: annotating another entity alone never exposes it.
     val resources: Map<String, UiResourceRegistration> = buildMap {
+        val pluralNames = mutableSetOf<String>()
         for (registration in registrations) {
             val annotation = registration.modelClass.getAnnotation(UiResource::class.java)
             requireNotNull(annotation) { "Missing @UiResource on ${registration.modelClass.name}" }
             val key = annotation.key
             require(key.matches(Regex("[a-z][a-z0-9-]*"))) { "Invalid UI resource key: $key" }
             require(key !in this) { "Duplicate UI resource key: $key" }
+            val pluralName = annotation.pluralName
+            require(pluralName.matches(Regex("[a-z][a-z0-9]*(?:-[a-z0-9]+)*"))) {
+                "Invalid UI resource plural name: $pluralName"
+            }
+            require(pluralNames.add(pluralName)) { "Duplicate UI resource plural name: $pluralName" }
             put(key, registration)
         }
     }.toSortedMap()

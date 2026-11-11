@@ -83,6 +83,7 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.scope.tenantId", equalTo(tenantId.toString()))
             jsonPath("$.scope.userId", equalTo(userId.toString()))
             jsonPath("$.resources[*].key", contains("season", "tournament"))
+            jsonPath("$.resources[*].pluralName", contains("seasons", "tournaments"))
             jsonPath("$.resources[0].label", equalTo("Seasons"))
             jsonPath("$.resources[0].displayField", equalTo("name"))
             jsonPath("$.resources[0].fields.length()", equalTo(4))

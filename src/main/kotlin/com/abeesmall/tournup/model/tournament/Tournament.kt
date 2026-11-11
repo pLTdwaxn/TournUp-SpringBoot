@@ -27,7 +27,7 @@ enum class ParticipantType {
 }
 
 @Entity
-@UiResource("tournament")
+@UiResource(key = "tournament", pluralName = "tournaments")
 @Table(name = "tournaments")
 @Audited
 class Tournament(

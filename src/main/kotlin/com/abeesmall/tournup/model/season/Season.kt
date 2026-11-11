@@ -16,7 +16,7 @@ import java.util.UUID
 import org.hibernate.envers.Audited
 
 @Entity
-@UiResource("season")
+@UiResource(key = "season", pluralName = "seasons")
 @Table(
     name = "seasons",
     uniqueConstraints = [

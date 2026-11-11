@@ -8,14 +8,29 @@ import kotlin.test.assertFailsWith
 import org.junit.jupiter.api.Test
 
 class UiResourceRegistryTests {
-    @UiResource("sample")
+    @UiResource(key = "sample", pluralName = "samples")
     private class First
 
-    @UiResource("sample")
+    @UiResource(key = "sample", pluralName = "other-samples")
     private class Duplicate
 
-    @UiResource("")
+    @UiResource(key = "", pluralName = "samples")
     private class EmptyKey
+
+    @UiResource(key = "other", pluralName = "samples")
+    private class DuplicatePlural
+
+    @UiResource(key = "sample", pluralName = "")
+    private class EmptyPlural
+
+    @UiResource(key = "sample", pluralName = "Samples")
+    private class UppercasePlural
+
+    @UiResource(key = "sample", pluralName = "../samples")
+    private class PathPlural
+
+    @UiResource(key = "person", pluralName = "people")
+    private class Person
 
     private class Unmarked
 
@@ -25,6 +40,30 @@ class UiResourceRegistryTests {
 
         assertEquals(setOf("sample"), registry.resources.keys)
         assertEquals(First::class.java, registry.resources.getValue("sample").modelClass)
+        assertEquals("samples", registry.resources.getValue("sample").pluralName)
+    }
+
+    @Test
+    fun `plural names come from model metadata including irregular plurals`() {
+        val registry = UiResourceRegistry(listOf(registration(Person::class.java)))
+
+        assertEquals("people", registry.resources.getValue("person").pluralName)
+    }
+
+    @Test
+    fun `plural names must be unique across resources`() {
+        assertFailsWith<IllegalArgumentException> {
+            UiResourceRegistry(listOf(registration(First::class.java), registration(DuplicatePlural::class.java)))
+        }
+    }
+
+    @Test
+    fun `plural names must be nonempty lowercase URL segments`() {
+        for (model in listOf(EmptyPlural::class.java, UppercasePlural::class.java, PathPlural::class.java)) {
+            assertFailsWith<IllegalArgumentException> {
+                UiResourceRegistry(listOf(registration(model)))
+            }
+        }
     }
 
     @Test

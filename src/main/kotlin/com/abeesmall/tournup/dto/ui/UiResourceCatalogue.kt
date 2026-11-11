@@ -18,6 +18,7 @@ data class UiCatalogueScope(val tenantId: UUID, val userId: UUID)
 
 data class UiResourceDescriptor(
     val key: String,
+    val pluralName: String,
     val label: String,
     val displayField: String?,
     val fields: Map<String, UiResourceField>,
