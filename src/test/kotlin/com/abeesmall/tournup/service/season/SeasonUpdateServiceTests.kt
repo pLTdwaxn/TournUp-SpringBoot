@@ -61,7 +61,7 @@ class SeasonUpdateServiceTests {
             SeasonData(existing.id, tournament.id, request.name, request.slug, 2027),
             result.item,
         )
-        assertEquals(tournament.name, result.context?.tournament?.name)
+        assertEquals(tournament.name, result.context.tournament.name)
         verify(seasons).findById(existing.id)
         verify(seasons).existsByTournamentIdAndNameAndIdNot(tournament.id, request.name, existing.id)
         verify(seasons).existsByTournamentIdAndSlugAndIdNot(tournament.id, request.slug, existing.id)

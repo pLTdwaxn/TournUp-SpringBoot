@@ -110,8 +110,11 @@ class SeasonCreateServiceTests {
         assertEquals(2026, saved.fromYear)
         assertEquals(
             SeasonData(saved.id, tournament.id, custom.name, custom.slug, 2026),
-            response,
+            response.item,
         )
+        assertEquals(tournament.id, response.context.tournament.id)
+        assertEquals(tournament.name, response.context.tournament.name)
+        assertEquals("/api/seasons/${saved.id}/edit/", response.manifest.commands.single().href)
         verify(tournaments).findById(tournament.id)
         verify(seasons).existsByTournamentIdAndName(tournament.id, custom.name)
         verify(seasons).existsByTournamentIdAndSlug(tournament.id, custom.slug)

@@ -3,7 +3,7 @@ package com.abeesmall.tournup.service.season
 import com.abeesmall.tournup.dto.season.SeasonCreateContext
 import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
 import com.abeesmall.tournup.dto.season.SeasonCreateRequest
-import com.abeesmall.tournup.dto.season.SeasonData
+import com.abeesmall.tournup.dto.season.SeasonDetailResponse
 import com.abeesmall.tournup.manifest.season.seasonCreateManifest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
@@ -40,7 +40,7 @@ class SeasonCreateService(
     }
 
     @Transactional
-    fun create(tournamentId: UUID, request: SeasonCreateRequest): SeasonData {
+    fun create(tournamentId: UUID, request: SeasonCreateRequest): SeasonDetailResponse {
         val violations = validator.validate(request)
         if (violations.isNotEmpty()) {
             throw ConstraintViolationException(violations)
@@ -67,13 +67,7 @@ class SeasonCreateService(
             throw seasonFieldConflict(failure) ?: failure
         }
 
-        return SeasonData(
-            id = season.id,
-            tournamentId = tournamentId,
-            name = season.name,
-            slug = season.slug,
-            fromYear = season.fromYear,
-        )
+        return seasonDetailResponse(season, canUpdate = true)
     }
 
     private fun requireTournament(tournamentId: UUID): Tournament =

@@ -4,7 +4,6 @@ import com.abeesmall.tournup.dto.audit.LastAuditValue
 import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
 import com.abeesmall.tournup.dto.season.SeasonCreateRequest
 import com.abeesmall.tournup.dto.season.SeasonDetailResponse
-import com.abeesmall.tournup.manifest.season.seasonDetailManifest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.canViewLastAudit
@@ -38,21 +37,19 @@ class SeasonCreateController(
     ): ResponseEntity<SeasonDetailResponse> {
         val created = service.create(tournamentId, request)
         // Envers writes the revision when the service transaction commits.
-        val item = if (canViewLastAudit(authentication)) {
+        val item = created.item
+        val response = if (canViewLastAudit(authentication)) {
             created.copy(
-                lastAudit = LastAuditValue(
-                    auditReader.findLatest(Season::class.java, listOf(created.id))[created.id],
+                item = item.copy(
+                    lastAudit = LastAuditValue(
+                        auditReader.findLatest(Season::class.java, listOf(item.id))[item.id],
+                    ),
                 ),
             )
         } else {
             created
         }
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-            SeasonDetailResponse(
-                manifest = seasonDetailManifest(item.name),
-                item = item,
-            ),
-        )
+        return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 }

@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.model.tournament
 
+import com.abeesmall.tournup.ui.resource.UiResource
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -26,6 +27,7 @@ enum class ParticipantType {
 }
 
 @Entity
+@UiResource("tournament")
 @Table(name = "tournaments")
 @Audited
 class Tournament(

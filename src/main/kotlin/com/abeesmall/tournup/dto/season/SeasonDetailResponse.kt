@@ -1,15 +1,12 @@
 package com.abeesmall.tournup.dto.season
 
 import com.abeesmall.tournup.ui.UiManifest
-import com.fasterxml.jackson.annotation.JsonInclude
 import java.util.UUID
 
 data class SeasonDetailResponse(
     val manifest: UiManifest,
     val item: SeasonData,
-
-    @get:JsonInclude(JsonInclude.Include.NON_NULL)
-    val context: SeasonDetailContext? = null,
+    val context: SeasonDetailContext,
 )
 
 data class SeasonDetailContext(

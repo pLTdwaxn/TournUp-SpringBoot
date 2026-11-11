@@ -36,44 +36,7 @@ fun seasonCreateManifest(tournamentId: UUID): UiManifest =
                 ),
             ),
         ),
-        fields = mapOf(
-            "fromYear" to UiField(
-                label = "From year",
-                dataType = UiDataType.INTEGER,
-                widget = UiWidget.NUMBER,
-                required = true,
-                editable = true,
-            ),
-            "name" to UiField(
-                label = "Name",
-                dataType = UiDataType.STRING,
-                widget = UiWidget.TEXT,
-                required = true,
-                editable = true,
-                behaviours = listOf(
-                    UiBehaviour(
-                        type = UiBehaviourType.SEASON_NAME_FROM_YEAR,
-                        sourceField = "fromYear",
-                    ),
-                ),
-                maxLength = SEASON_NAME_MAX_LENGTH,
-            ),
-            "slug" to UiField(
-                label = "Slug",
-                dataType = UiDataType.STRING,
-                widget = UiWidget.TEXT,
-                required = true,
-                editable = true,
-                behaviours = listOf(
-                    UiBehaviour(
-                        type = UiBehaviourType.SLUGIFY,
-                        sourceField = "name",
-                    ),
-                ),
-                maxLength = SEASON_SLUG_MAX_LENGTH,
-                pattern = SEASON_SLUG_PATTERN,
-            ),
-        ),
+        fields = seasonCreateFields(),
         commands = listOf(
             UiCommand(
                 id = "create",
@@ -81,5 +44,45 @@ fun seasonCreateManifest(tournamentId: UUID): UiManifest =
                 method = UiCommandMethod.POST,
                 href = "/api/tournaments/$tournamentId/seasons/",
             ),
+        ),
+    )
+
+internal fun seasonCreateFields(): Map<String, UiField> =
+    mapOf(
+        "fromYear" to UiField(
+            label = "From year",
+            dataType = UiDataType.INTEGER,
+            widget = UiWidget.NUMBER,
+            required = true,
+            editable = true,
+        ),
+        "name" to UiField(
+            label = "Name",
+            dataType = UiDataType.STRING,
+            widget = UiWidget.TEXT,
+            required = true,
+            editable = true,
+            behaviours = listOf(
+                UiBehaviour(
+                    type = UiBehaviourType.SEASON_NAME_FROM_YEAR,
+                    sourceField = "fromYear",
+                ),
+            ),
+            maxLength = SEASON_NAME_MAX_LENGTH,
+        ),
+        "slug" to UiField(
+            label = "Slug",
+            dataType = UiDataType.STRING,
+            widget = UiWidget.TEXT,
+            required = true,
+            editable = true,
+            behaviours = listOf(
+                UiBehaviour(
+                    type = UiBehaviourType.SLUGIFY,
+                    sourceField = "name",
+                ),
+            ),
+            maxLength = SEASON_SLUG_MAX_LENGTH,
+            pattern = SEASON_SLUG_PATTERN,
         ),
     )

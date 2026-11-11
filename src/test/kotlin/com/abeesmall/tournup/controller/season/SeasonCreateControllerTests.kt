@@ -5,7 +5,11 @@ import com.abeesmall.tournup.dto.season.SeasonCreateContext
 import com.abeesmall.tournup.dto.season.SeasonCreateFormResponse
 import com.abeesmall.tournup.dto.season.SeasonCreateRequest
 import com.abeesmall.tournup.dto.season.SeasonData
+import com.abeesmall.tournup.dto.season.SeasonDetailContext
+import com.abeesmall.tournup.dto.season.SeasonDetailResponse
+import com.abeesmall.tournup.dto.season.SeasonTournamentContext
 import com.abeesmall.tournup.manifest.season.seasonCreateManifest
+import com.abeesmall.tournup.manifest.season.seasonDetailManifest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
@@ -52,6 +56,14 @@ class SeasonCreateControllerTests(
     private val createUrl = "/api/tournaments/$tournamentId/seasons/"
     private val request = SeasonCreateRequest("2026 S4", "2026-s4", 2026)
     private val created = SeasonData(UUID.randomUUID(), tournamentId, "2026 S4", "2026-s4", 2026)
+    private val createdResponse = SeasonDetailResponse(
+        manifest = seasonDetailManifest(created.name, editHref = "/api/seasons/${created.id}/edit/"),
+        item = created,
+        context = SeasonDetailContext(
+            tournament = SeasonTournamentContext(tournamentId, "Winter Open", "/api/tournaments/$tournamentId/"),
+            collectionHref = "/api/tournaments/$tournamentId/seasons/",
+        ),
+    )
 
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
@@ -89,7 +101,7 @@ class SeasonCreateControllerTests(
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers create a season and receive its read manifest and committed audit`(role: String) {
         val actorId = UUID.randomUUID()
-        whenever(service.create(tournamentId, request)).thenReturn(created)
+        whenever(service.create(tournamentId, request)).thenReturn(createdResponse)
         whenever(auditReader.findLatest(Season::class.java, listOf(created.id))).thenReturn(
             mapOf(created.id to LastAuditData(42, Instant.parse("2026-11-10T00:00:00Z"), actorId)),
         )
@@ -110,12 +122,15 @@ class SeasonCreateControllerTests(
             jsonPath("$.manifest.fields.fromYear.widget", equalTo("display"))
             jsonPath("$.manifest.fields.name.editable", equalTo(false))
             jsonPath("$.manifest.fields.slug.editable", equalTo(false))
-            jsonPath("$.manifest.commands.length()", equalTo(0))
+            jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/${created.id}/edit/"))
             jsonPath("$.item.id", equalTo(created.id.toString()))
             jsonPath("$.item.tournamentId", equalTo(tournamentId.toString()))
             jsonPath("$.item.name", equalTo(request.name))
             jsonPath("$.item.slug", equalTo(request.slug))
             jsonPath("$.item.fromYear", equalTo(2026))
+            jsonPath("$.context.tournament.id", equalTo(tournamentId.toString()))
+            jsonPath("$.context.tournament.name", equalTo("Winter Open"))
+            jsonPath("$.context.collectionHref", equalTo(createUrl))
             jsonPath("$.item.lastAudit.revision", equalTo(42))
             jsonPath("$.item.lastAudit.timestamp", equalTo("2026-11-10T00:00:00Z"))
             jsonPath("$.item.lastAudit.actorId", equalTo(actorId.toString()))
@@ -129,7 +144,7 @@ class SeasonCreateControllerTests(
 
     @Test
     fun `missing audit history is explicitly null`() {
-        whenever(service.create(tournamentId, request)).thenReturn(created)
+        whenever(service.create(tournamentId, request)).thenReturn(createdResponse)
         whenever(auditReader.findLatest(Season::class.java, listOf(created.id))).thenReturn(emptyMap())
 
         mockMvc.post(createUrl) {
