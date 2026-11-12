@@ -88,12 +88,11 @@ internal fun tournamentResourceDefinition(): UiResourceRegistration {
         label = "Tournaments",
         displayField = "name",
         presentation = tournamentFieldPresentation(),
-        identifier = UiResourceIdentifier("id", "uuid", slugField = "slug"),
+        identifier = UiResourceIdentifier("id", "slug-nano-id", slugField = "slug", nanoIdField = "nanoId"),
         relationships = emptyList(),
         operations = listOf(
             UiResourceOperation("list", UiOperation.LIST, UiCommandMethod.GET, "/api/tournaments/"),
             UiResourceOperation("read", UiOperation.READ, UiCommandMethod.GET, "/api/tournaments/{id}/"),
-            UiResourceOperation("read-by-slug", UiOperation.READ, UiCommandMethod.GET, "/api/tournaments/{slug}/"),
             UiResourceOperation("create-form", UiOperation.CREATE, UiCommandMethod.GET, "/api/tournaments/create/"),
             UiResourceOperation("create", UiOperation.CREATE, UiCommandMethod.POST, "/api/tournaments/"),
             UiResourceOperation("edit-form", UiOperation.UPDATE, UiCommandMethod.GET, "/api/tournaments/{id}/edit/"),

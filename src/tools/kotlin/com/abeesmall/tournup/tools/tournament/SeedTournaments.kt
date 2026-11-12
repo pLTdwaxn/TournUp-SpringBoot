@@ -7,7 +7,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.DriverManager
 import java.util.Properties
-import java.util.UUID
+import com.abeesmall.tournup.model.ResourceIdentifiers
 
 fun main() {
     val target = 41
@@ -61,14 +61,15 @@ fun main() {
                 """
                 INSERT INTO public.tournaments (
                     id, slug, name, description,
-                    handicap_mode, participation_mode, participant_type
+                    handicap_mode, participation_mode, participant_type, nano_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (slug) DO NOTHING
                 """.trimIndent(),
             ).use { statement ->
                 for (n in candidates) {
-                    statement.setObject(1, UUID.randomUUID())
+                    statement.setObject(1, ResourceIdentifiers.uuidV7())
+                    statement.setString(8, ResourceIdentifiers.nanoId())
                     statement.setString(2, dummySlug(n))
                     statement.setString(
                         3,

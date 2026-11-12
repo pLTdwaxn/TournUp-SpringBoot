@@ -40,7 +40,7 @@ fun <T : AuditedResource<T>> UiRecordResponse<T>.withLatestAudit(
     entityClass: Class<*>, authentication: Authentication, reader: LatestAuditReader,
 ): UiRecordResponse<T> {
     if (!canViewLastAudit(authentication)) return this
-    val audit = reader.findLatest(entityClass, listOf(item.id))[item.id]
+    val audit = reader.findLatest(entityClass, listOf(item.internalId))[item.internalId]
     return copy(item = item.withLastAudit(LastAuditValue(audit)))
 }
 
@@ -48,6 +48,6 @@ fun <T : AuditedResource<T>> UiCollectionResponse<T>.withLatestAudit(
     entityClass: Class<*>, authentication: Authentication, reader: LatestAuditReader,
 ): UiCollectionResponse<T> {
     if (!canViewLastAudit(authentication) || items.isEmpty()) return this
-    val audits = reader.findLatest(entityClass, items.map { it.id })
-    return copy(items = items.map { it.withLastAudit(LastAuditValue(audits[it.id])) })
+    val audits = reader.findLatest(entityClass, items.map { it.internalId })
+    return copy(items = items.map { it.withLastAudit(LastAuditValue(audits[it.internalId])) })
 }

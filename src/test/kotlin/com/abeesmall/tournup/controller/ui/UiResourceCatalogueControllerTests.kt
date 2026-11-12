@@ -126,18 +126,22 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[0].fields.fromYear.required", equalTo(true))
             jsonPath("$.resources[0].fields.name.maxLength", equalTo(255))
             jsonPath("$.resources[0].identifier.field", equalTo("id"))
-            jsonPath("$.resources[0].identifier.slugContext", contains("tournamentId"))
+            jsonPath("$.resources[0].identifier.slugContext.length()", equalTo(0))
+            jsonPath("$.resources[0].identifier.type", equalTo("slug-nano-id"))
+            jsonPath("$.resources[0].identifier.slugField", equalTo("slug"))
+            jsonPath("$.resources[0].identifier.nanoIdField", equalTo("nanoId"))
             jsonPath("$.resources[0].relationships[0].field", equalTo("tournamentId"))
             jsonPath("$.resources[0].relationships[0].resource", equalTo("tournament"))
             jsonPath("$.resources[0].operations[0].href", equalTo("/api/seasons/"))
             jsonPath("$.resources[0].operations[0].requiredContext.length()", equalTo(0))
-            jsonPath("$.resources[0].operations[3].id", equalTo("read-by-slug"))
-            jsonPath("$.resources[0].operations[3].requiredContext", contains("tournamentId"))
             jsonPath("$.resources[1].fields.length()", equalTo(6))
             jsonPath("$.resources[1].fields.participantType.dataType", equalTo("enum"))
             jsonPath("$.resources[1].fields.participantType.options[*].value", contains("PLAYER", "TEAM"))
             jsonPath("$.resources[1].operations[0].href", equalTo("/api/tournaments/"))
             jsonPath("$.resources[1].identifier.slugContext.length()", equalTo(0))
+            jsonPath("$.resources[1].identifier.type", equalTo("slug-nano-id"))
+            jsonPath("$.resources[1].identifier.slugField", equalTo("slug"))
+            jsonPath("$.resources[1].identifier.nanoIdField", equalTo("nanoId"))
         }
     }
 
@@ -153,17 +157,17 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[1].canReadLastAudit", equalTo(true))
             jsonPath(
                 "$.resources[0].operations[*].id",
-                contains("list", "list-in-tournament", "read", "read-by-slug", "create-form", "create", "edit-form", "update", "naming-context", "lookup"),
+                contains("list", "list-in-tournament", "read", "create-form", "create", "edit-form", "update", "naming-context", "lookup"),
             )
-            jsonPath("$.resources[0].operations[4].href", equalTo("/api/seasons/create/"))
-            jsonPath("$.resources[0].operations[4].requiredContext.length()", equalTo(0))
-            jsonPath("$.resources[0].operations[5].href", equalTo("/api/seasons/"))
-            jsonPath("$.resources[0].operations[8].requiredContext", contains("tournamentId"))
-            jsonPath("$.resources[0].operations[5].method", equalTo("POST"))
-            jsonPath("$.resources[0].operations[7].method", equalTo("PUT"))
+            jsonPath("$.resources[0].operations[3].href", equalTo("/api/seasons/create/"))
+            jsonPath("$.resources[0].operations[3].requiredContext.length()", equalTo(0))
+            jsonPath("$.resources[0].operations[4].href", equalTo("/api/seasons/"))
+            jsonPath("$.resources[0].operations[7].requiredContext", contains("tournamentId"))
+            jsonPath("$.resources[0].operations[4].method", equalTo("POST"))
+            jsonPath("$.resources[0].operations[6].method", equalTo("PUT"))
             jsonPath(
                 "$.resources[1].operations[*].id",
-                contains("list", "read", "read-by-slug", "create-form", "create", "edit-form", "update", "lookup"),
+                contains("list", "read", "create-form", "create", "edit-form", "update", "lookup"),
             )
         }
     }
@@ -178,8 +182,8 @@ class UiResourceCatalogueControllerTests(
             status { isOk() }
             jsonPath("$.resources[0].canReadLastAudit", equalTo(false))
             jsonPath("$.resources[1].canReadLastAudit", equalTo(false))
-            jsonPath("$.resources[0].operations[*].id", contains("list", "list-in-tournament", "read", "read-by-slug", "lookup"))
-            jsonPath("$.resources[1].operations[*].id", contains("list", "read", "read-by-slug", "lookup"))
+            jsonPath("$.resources[0].operations[*].id", contains("list", "list-in-tournament", "read", "lookup"))
+            jsonPath("$.resources[1].operations[*].id", contains("list", "read", "lookup"))
         }
     }
 

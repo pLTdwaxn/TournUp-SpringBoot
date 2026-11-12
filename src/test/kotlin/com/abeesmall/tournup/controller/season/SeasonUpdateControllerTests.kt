@@ -57,14 +57,17 @@ class SeasonUpdateControllerTests(
     private val existing = Season(
         tournament = tournament, name = "2026 S1", slug = "2026-s1", fromYear = 2026,
     )
-    private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.id)
-    private val shallowUrl = "/api/seasons/${existing.id}/"
-    private val urls = listOf(shallowUrl, "/api/tournaments/${tournament.id}/seasons/${existing.id}/")
+    @org.junit.jupiter.api.BeforeEach
+    fun parentLookup() { whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament) }
+
+    private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.locator)
+    private val shallowUrl = "/api/seasons/${existing.locator}/"
+    private val urls = listOf(shallowUrl, "/api/tournaments/${tournament.locator}/seasons/${existing.locator}/")
 
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers receive manual editing forms through both routes`(role: String) {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
 
         for (url in urls) {
             mockMvc.get("${url}edit/") {
@@ -82,8 +85,8 @@ class SeasonUpdateControllerTests(
                 jsonPath("$.manifest.fields.tournamentId.reference.resource", equalTo("tournament"))
                 jsonPath("$.manifest.fields.tournamentId.reference.lookupOperation", equalTo("lookup"))
                 jsonPath("$.manifest.fields.tournamentId.reference.resolveOperation", equalTo("read"))
-                jsonPath("$.item.tournamentId", equalTo(tournament.id.toString()))
-                jsonPath("$.included.tournament[0].id", equalTo(tournament.id.toString()))
+                jsonPath("$.item.tournamentId", equalTo(tournament.locator))
+                jsonPath("$.included.tournament[0].id", equalTo(tournament.locator))
                 jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
                 jsonPath("$.manifest.fields.fromYear.widget", equalTo("number"))
                 jsonPath("$.manifest.fields.fromYear.required", equalTo(true))
@@ -103,7 +106,7 @@ class SeasonUpdateControllerTests(
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers update through both routes and receive detail context and audit metadata`(role: String) {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         whenever(seasons.saveAndFlush(existing)).thenReturn(existing)
         val actorId = UUID.randomUUID()
         whenever(auditReader.findLatest(Season::class.java, listOf(existing.id))).thenReturn(
@@ -121,12 +124,12 @@ class SeasonUpdateControllerTests(
                 jsonPath("$.manifest.operation", equalTo("read"))
                 jsonPath("$.manifest.fields.tournamentId.dataType", equalTo("reference"))
                 jsonPath("$.manifest.fields.tournamentId.widget", equalTo("display"))
-                jsonPath("$.included.tournament[0].id", equalTo(tournament.id.toString()))
+                jsonPath("$.included.tournament[0].id", equalTo(tournament.locator))
                 jsonPath("$.included.tournament[0].name", equalTo("Winter Open"))
                 jsonPath("$.manifest.title", equalTo("Summer league"))
-                jsonPath("$.manifest.commands[0].href", equalTo("${shallowUrl}edit/"))
-                jsonPath("$.item.id", equalTo(existing.id.toString()))
-                jsonPath("$.item.tournamentId", equalTo(tournament.id.toString()))
+                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/${existing.locator}/edit/"))
+                jsonPath("$.item.id", equalTo(existing.locator))
+                jsonPath("$.item.tournamentId", equalTo(tournament.locator))
                 jsonPath("$.item.name", equalTo("Summer league"))
                 jsonPath("$.item.slug", equalTo("summer-league"))
                 jsonPath("$.item.fromYear", equalTo(2027))
@@ -184,7 +187,7 @@ class SeasonUpdateControllerTests(
     @Test
     @WithMockUser(roles = ["SUPER_ADMIN"])
     fun `unknown season has no form or update and no audit lookup`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.empty())
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(null)
         for (url in urls) {
             mockMvc.get("${url}edit/").andExpect { status { isNotFound() } }
             mockMvc.put(url) {
@@ -193,7 +196,7 @@ class SeasonUpdateControllerTests(
                 content = mapper.writeValueAsString(request)
             }.andExpect { status { isNotFound() } }
         }
-        verify(seasons, times(4)).findById(existing.id)
+        verify(seasons, times(4)).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
         verifyNoInteractions(auditReader)
     }
@@ -201,8 +204,8 @@ class SeasonUpdateControllerTests(
     @Test
     @WithMockUser(roles = ["SUPER_ADMIN"])
     fun `wrong tournament returns not found without changing the season`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
-        val url = "/api/tournaments/${UUID.randomUUID()}/seasons/${existing.id}/"
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
+        val url = "/api/tournaments/missing-ZZZZ/seasons/${existing.locator}/"
 
         mockMvc.get("${url}edit/").andExpect { status { isNotFound() } }
         mockMvc.put(url) {
@@ -214,7 +217,7 @@ class SeasonUpdateControllerTests(
         assertEquals("2026 S1", existing.name)
         assertEquals("2026-s1", existing.slug)
         assertEquals(2026, existing.fromYear)
-        verify(seasons, times(2)).findById(existing.id)
+        verify(seasons, times(2)).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
         verifyNoInteractions(auditReader)
     }
@@ -250,8 +253,8 @@ class SeasonUpdateControllerTests(
     @Test
     @WithMockUser(roles = ["SUPER_ADMIN"])
     fun `a different submitted tournament returns a field error through both routes`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
-        val reparented = request.copy(tournamentId = UUID.randomUUID())
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
+        val reparented = request.copy(tournamentId = "missing-ZZZZ")
 
         for (url in urls) {
             mockMvc.put(url) {
@@ -268,7 +271,7 @@ class SeasonUpdateControllerTests(
         assertEquals("2026 S1", existing.name)
         assertEquals("2026-s1", existing.slug)
         assertEquals(2026, existing.fromYear)
-        verify(seasons, times(2)).findById(existing.id)
+        verify(seasons, times(2)).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
         verifyNoInteractions(auditReader)
     }
@@ -315,15 +318,12 @@ class SeasonUpdateControllerTests(
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["name", "slug"])
+    @ValueSource(strings = ["name"])
     @WithMockUser(roles = ["SUPER_ADMIN"])
     fun `conflicts return field errors without an audit lookup`(field: String) {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         if (field == "name") {
             whenever(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, request.name, existing.id))
-                .thenReturn(true)
-        } else {
-            whenever(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, request.slug, existing.id))
                 .thenReturn(true)
         }
         for (url in urls) {

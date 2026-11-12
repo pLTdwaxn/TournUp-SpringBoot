@@ -1,11 +1,10 @@
 package com.abeesmall.tournup.service.season
 
-import java.util.UUID
 import org.hibernate.exception.ConstraintViolationException
 import org.springframework.dao.DataIntegrityViolationException
 
 
-class SeasonTournamentNotFoundException(tournamentId: UUID) :
+class SeasonTournamentNotFoundException(tournamentId: String) :
     RuntimeException("Tournament not found: $tournamentId")
 
 class SeasonTournamentChangeException :
@@ -22,7 +21,6 @@ internal fun seasonFieldConflict(failure: DataIntegrityViolationException): Seas
         .mapNotNull {
             when (it.constraintName) {
                 "seasons_tournament_name_unique" -> "name"
-                "seasons_tournament_slug_unique" -> "slug"
                 else -> null
             }
         }

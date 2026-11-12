@@ -10,7 +10,6 @@ import jakarta.validation.ConstraintViolationException
 import jakarta.validation.Validation
 import java.sql.SQLException
 import java.util.Optional
-import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -40,7 +39,7 @@ class SeasonUpdateServiceTests {
         slug = "2026-s1",
         fromYear = 2026,
     )
-    private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.id)
+    private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.locator)
 
     @AfterEach
     fun closeValidatorFactory() {
@@ -48,95 +47,115 @@ class SeasonUpdateServiceTests {
     }
 
     @Test
+    fun `NanoID cannot be changed after creation`() {
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
+        val conflict = assertFailsWith<org.springframework.web.server.ResponseStatusException> {
+            service.update(existing.locator, request.copy(nanoId = if (existing.nanoId == "BCDF") "GHJK" else "BCDF"))
+        }
+        assertEquals(org.springframework.http.HttpStatus.BAD_REQUEST, conflict.statusCode)
+        verify(seasons).findByNanoId(existing.nanoId)
+        verifyNoMoreInteractions(seasons)
+    }
+
+    @Test
+    fun `a renamed parent remains the same immutable relationship`() {
+        val old = request
+        tournament.slug = "renamed-parent"
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
+        whenever(seasons.saveAndFlush(existing)).thenReturn(existing)
+        val result = assertNotNull(service.update(existing.locator, old))
+        assertSame(tournament, existing.tournament)
+        assertEquals(tournament.locator, result.item.tournamentId)
+    }
+
+    @Test
     fun `updates editable fields and preserves identity and tournament`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         whenever(seasons.saveAndFlush(existing)).thenReturn(existing)
 
-        val result = assertNotNull(service.update(existing.id, request))
+        val result = assertNotNull(service.update(existing.locator, request))
 
         assertEquals(request.name, existing.name)
         assertEquals(request.slug, existing.slug)
         assertEquals(request.fromYear, existing.fromYear)
         assertSame(tournament, existing.tournament)
         assertEquals(
-            SeasonData(existing.id, tournament.id, request.name, request.slug, 2027),
+            SeasonData(existing.id, tournament.locator, request.name, request.slug, 2027, nanoId = existing.nanoId),
             result.item,
         )
         assertEquals(
-            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            mapOf("tournament" to listOf(mapOf("id" to tournament.locator, "name" to tournament.name))),
             result.included,
         )
-        verify(seasons).findById(existing.id)
+        verify(seasons).findByNanoId(existing.nanoId)
         verify(seasons).existsByTournamentIdAndNameAndIdNot(tournament.id, request.name, existing.id)
-        verify(seasons).existsByTournamentIdAndSlugAndIdNot(tournament.id, request.slug, existing.id)
         verify(seasons).saveAndFlush(existing)
         verifyNoMoreInteractions(seasons)
     }
 
     @Test
     fun `edit form includes the stored tournament reference`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
 
-        val response = assertNotNull(service.editForm(existing.id))
+        val response = assertNotNull(service.editForm(existing.locator))
 
-        assertEquals(SeasonWriteRequest("2026 S1", "2026-s1", 2026, tournament.id), response.item)
+        assertEquals(SeasonWriteRequest("2026 S1", "2026-s1", 2026, tournament.locator, existing.nanoId), response.item)
         assertEquals(
-            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            mapOf("tournament" to listOf(mapOf("id" to tournament.locator, "name" to tournament.name))),
             response.included,
         )
-        verify(seasons).findById(existing.id)
+        verify(seasons).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
     }
 
     @Test
     fun `missing season has no edit form`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.empty())
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(null)
 
-        assertNull(service.editForm(existing.id))
+        assertNull(service.editForm(existing.locator))
 
-        verify(seasons).findById(existing.id)
+        verify(seasons).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
     }
 
     @Test
     fun `nested requests with the wrong parent neither expose a form nor change the season`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
-        val wrongParent = UUID.randomUUID()
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
+        val wrongParent = "missing-ZZZZ"
 
-        assertNull(service.editForm(existing.id, wrongParent))
-        assertNull(service.update(existing.id, request, wrongParent))
+        assertFailsWith<com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException> { service.editForm(existing.locator, wrongParent) }
+        assertFailsWith<com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException> { service.update(existing.locator, request, wrongParent) }
 
         assertEquals("2026 S1", existing.name)
         assertEquals("2026-s1", existing.slug)
         assertEquals(2026, existing.fromYear)
         assertSame(tournament, existing.tournament)
-        verify(seasons, times(2)).findById(existing.id)
+        verify(seasons, times(2)).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
     }
 
     @Test
     fun `allows changing the year while keeping the current name and slug`() {
-        val unchanged = SeasonWriteRequest(existing.name, existing.slug, 2027, tournament.id)
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        val unchanged = SeasonWriteRequest(existing.name, existing.slug, 2027, tournament.locator)
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         whenever(seasons.saveAndFlush(existing)).thenReturn(existing)
 
-        val response = assertNotNull(service.update(existing.id, unchanged))
+        val response = assertNotNull(service.update(existing.locator, unchanged))
         assertEquals("2026 S1", response.item.name)
         assertEquals("2026-s1", response.item.slug)
         assertEquals(2027, response.item.fromYear)
 
         verify(seasons).existsByTournamentIdAndNameAndIdNot(tournament.id, unchanged.name, existing.id)
-        verify(seasons).existsByTournamentIdAndSlugAndIdNot(tournament.id, unchanged.slug, existing.id)
         verify(seasons).saveAndFlush(existing)
     }
 
     @Test
     fun `unknown season returns null without saving`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.empty())
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(null)
 
-        assertNull(service.update(existing.id, request))
+        assertNull(service.update(existing.locator, request))
 
-        verify(seasons).findById(existing.id)
+        verify(seasons).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
     }
 
@@ -153,7 +172,7 @@ class SeasonUpdateServiceTests {
         )
         for ((field, invalid) in cases) {
             val failure = assertFailsWith<ConstraintViolationException> {
-                service.update(existing.id, invalid)
+                service.update(existing.locator, invalid)
             }
             assertEquals(
                 setOf(field),
@@ -165,34 +184,31 @@ class SeasonUpdateServiceTests {
 
     @Test
     fun `a different submitted tournament is rejected before changing any fields`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
 
         assertFailsWith<SeasonTournamentChangeException> {
-            service.update(existing.id, request.copy(tournamentId = UUID.randomUUID()))
+            service.update(existing.locator, request.copy(tournamentId = "missing-ZZZZ"))
         }
 
         assertSame(tournament, existing.tournament)
         assertEquals("2026 S1", existing.name)
         assertEquals("2026-s1", existing.slug)
         assertEquals(2026, existing.fromYear)
-        verify(seasons).findById(existing.id)
+        verify(seasons).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(seasons)
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["name", "slug"])
+    @ValueSource(strings = ["name"])
     fun `another season's values are rejected before changing the entity`(field: String) {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         if (field == "name") {
             whenever(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, request.name, existing.id))
-                .thenReturn(true)
-        } else {
-            whenever(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, request.slug, existing.id))
                 .thenReturn(true)
         }
 
         val conflict = assertFailsWith<SeasonFieldConflictException> {
-            service.update(existing.id, request)
+            service.update(existing.locator, request)
         }
 
         assertEquals(field, conflict.field)
@@ -200,23 +216,20 @@ class SeasonUpdateServiceTests {
         assertEquals("2026-s1", existing.slug)
         assertEquals(2026, existing.fromYear)
         assertSame(tournament, existing.tournament)
-        verify(seasons).findById(existing.id)
+        verify(seasons).findByNanoId(existing.nanoId)
         verify(seasons).existsByTournamentIdAndNameAndIdNot(tournament.id, request.name, existing.id)
-        if (field == "slug") {
-            verify(seasons).existsByTournamentIdAndSlugAndIdNot(tournament.id, request.slug, existing.id)
-        }
         verifyNoMoreInteractions(seasons)
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["name", "slug"])
+    @ValueSource(strings = ["name"])
     fun `concurrent database uniqueness failures are translated`(field: String) {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         val failure = constraintFailure("seasons_tournament_${field}_unique")
         whenever(seasons.saveAndFlush(existing)).thenThrow(failure)
 
         val conflict = assertFailsWith<SeasonFieldConflictException> {
-            service.update(existing.id, request)
+            service.update(existing.locator, request)
         }
 
         assertEquals(field, conflict.field)
@@ -225,13 +238,13 @@ class SeasonUpdateServiceTests {
 
     @Test
     fun `unrelated persistence failures are preserved`() {
-        whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
+        whenever(seasons.findByNanoId(existing.nanoId)).thenReturn(existing)
         val failure = constraintFailure("seasons_tournament_fk")
         whenever(seasons.saveAndFlush(existing)).thenThrow(failure)
 
         assertSame(
             failure,
-            assertFailsWith<DataIntegrityViolationException> { service.update(existing.id, request) },
+            assertFailsWith<DataIntegrityViolationException> { service.update(existing.locator, request) },
         )
     }
 

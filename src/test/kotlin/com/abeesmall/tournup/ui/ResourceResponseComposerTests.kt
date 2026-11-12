@@ -31,7 +31,7 @@ class ResourceResponseComposerTests {
     @RegisterExtension @JvmField val ui = UiTestSupport()
 
     private val reader = mock(LatestAuditReader::class.java)
-    private val item = SeasonData(UUID.randomUUID(), UUID.randomUUID(), "2026 S1", "2026-s1", 2026)
+    private val item = SeasonData(UUID.randomUUID(), "tournament-BCDF", "2026 S1", "2026-s1", 2026, nanoId = "BCDF")
     private val manifest = ui.manifests.resolve(seasonResourceDefinition(),
         UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.READ, title = item.name))
     private fun viewer(role: String) = UsernamePasswordAuthenticationToken("user", null,
@@ -39,13 +39,13 @@ class ResourceResponseComposerTests {
 
     @Test
     fun `record enrichment preserves data and includes permitted audit metadata`() {
-        whenever(reader.findLatest(Season::class.java, listOf(item.id))).thenReturn(
-            mapOf(item.id to LastAuditData(7, Instant.parse("2026-11-12T00:00:00Z"), null)),
+        whenever(reader.findLatest(Season::class.java, listOf(item.internalId))).thenReturn(
+            mapOf(item.internalId to LastAuditData(7, Instant.parse("2026-11-12T00:00:00Z"), null)),
         )
         val result = UiRecordResponse(manifest, item).withLatestAudit(Season::class.java, viewer("SUPER_ADMIN"), reader)
         assertEquals(item.id, result.item.id)
         assertNotNull(result.item.lastAudit)
-        verify(reader).findLatest(Season::class.java, listOf(item.id))
+        verify(reader).findLatest(Season::class.java, listOf(item.internalId))
     }
 
     @Test

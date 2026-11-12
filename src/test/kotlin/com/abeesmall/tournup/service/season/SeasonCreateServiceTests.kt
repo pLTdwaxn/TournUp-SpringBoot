@@ -33,7 +33,7 @@ class SeasonCreateServiceTests {
     private val validatorFactory = Validation.buildDefaultValidatorFactory()
     private val service = SeasonService(tournaments, seasons, validatorFactory.validator)
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")
-    private val request = SeasonWriteRequest(name = "2026 S4", slug = "2026-s4", fromYear = 2026, tournamentId = tournament.id)
+    private val request = SeasonWriteRequest(name = "2026 S4", slug = "2026-s4", fromYear = 2026, tournamentId = tournament.locator)
 
     @AfterEach
     fun closeValidatorFactory() {
@@ -42,7 +42,7 @@ class SeasonCreateServiceTests {
 
     @Test
     fun `naming context groups existing names by year for the requested tournament`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         whenever(seasons.findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id))
             .thenReturn(
                 listOf(
@@ -53,9 +53,9 @@ class SeasonCreateServiceTests {
                 ),
             )
 
-        val response = service.namingContext(tournament.id)
+        val response = service.namingContext(tournament.locator)
 
-        assertEquals(tournament.id, response.tournamentId)
+        assertEquals(tournament.locator, response.tournamentId)
         assertEquals(
             mapOf(
                 2026 to listOf("2026 S1", "2026 S3", "Winter league"),
@@ -63,7 +63,7 @@ class SeasonCreateServiceTests {
             ),
             response.existingNamesByYear,
         )
-        verify(tournaments).findById(tournament.id)
+        verify(tournaments).findByNanoId(tournament.nanoId)
         verify(seasons).findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id)
         verifyNoMoreInteractions(tournaments, seasons)
     }
@@ -72,42 +72,43 @@ class SeasonCreateServiceTests {
     fun `unselected form does not query records or choose a tournament`() {
         val response = service.createForm(null)
 
-        assertEquals(SeasonWriteRequest("", "", null, null), response.item)
+        assertEquals(SeasonWriteRequest("", "", null, null), response.item.copy(nanoId = null))
+        kotlin.test.assertTrue(requireNotNull(response.item.nanoId).matches(Regex("[23456789BCDFGHJKLMNPQRSTVWXYZ]{4}")))
         assertEquals(emptyMap(), response.included)
         verifyNoInteractions(tournaments, seasons)
     }
 
     @Test
     fun `prefilled form includes the selected tournament reference`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
-        val selected = service.createForm(tournament.id)
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
+        val selected = service.createForm(tournament.locator)
 
-        assertEquals(tournament.id, selected.item.tournamentId)
+        assertEquals(tournament.locator, selected.item.tournamentId)
         assertEquals(
-            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            mapOf("tournament" to listOf(mapOf("id" to tournament.locator, "name" to tournament.name))),
             selected.included,
         )
-        verify(tournaments).findById(tournament.id)
+        verify(tournaments).findByNanoId(tournament.nanoId)
         verifyNoMoreInteractions(tournaments)
         verifyNoInteractions(seasons)
     }
 
     @Test
     fun `empty tournament has empty naming context`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         whenever(seasons.findAllByTournamentIdOrderByFromYearAscNameAsc(tournament.id))
             .thenReturn(emptyList())
 
-        assertEquals(emptyMap(), service.namingContext(tournament.id).existingNamesByYear)
+        assertEquals(emptyMap(), service.namingContext(tournament.locator).existingNamesByYear)
     }
 
     @Test
     fun `unknown tournament has no form or naming context`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.empty())
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(null)
 
-        assertFailsWith<SeasonTournamentNotFoundException> { service.namingContext(tournament.id) }
+        assertFailsWith<SeasonTournamentNotFoundException> { service.namingContext(tournament.locator) }
         assertFailsWith<SeasonTournamentNotFoundException> {
-            service.createForm(tournament.id)
+            service.createForm(tournament.locator)
         }
 
         verifyNoInteractions(seasons)
@@ -115,12 +116,12 @@ class SeasonCreateServiceTests {
 
     @Test
     fun `creates a season with the requested parent and editable custom values`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         var persisted: Season? = null
         whenever(seasons.saveAndFlush(anySeason())).thenAnswer { call ->
             call.getArgument<Season>(0).also { persisted = it }
         }
-        val custom = request.copy(name = "Summer league", slug = "custom-summer-league")
+        val custom = request.copy(name = "Summer league", slug = "custom-summer-league", nanoId = "BCDF")
 
         val response = service.create(custom)
         val saved = assertNotNull(persisted)
@@ -128,18 +129,18 @@ class SeasonCreateServiceTests {
         assertSame(tournament, saved.tournament)
         assertEquals(custom.name, saved.name)
         assertEquals(custom.slug, saved.slug)
+        assertEquals(custom.nanoId, saved.nanoId)
         assertEquals(2026, saved.fromYear)
         assertEquals(
-            SeasonData(saved.id, tournament.id, custom.name, custom.slug, 2026),
+            SeasonData(saved.id, tournament.locator, custom.name, custom.slug, 2026, nanoId = saved.nanoId),
             response.item,
         )
         assertEquals(
-            mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
+            mapOf("tournament" to listOf(mapOf("id" to tournament.locator, "name" to tournament.name))),
             response.included,
         )
-        verify(tournaments).findById(tournament.id)
+        verify(tournaments).findByNanoId(tournament.nanoId)
         verify(seasons).existsByTournamentIdAndName(tournament.id, custom.name)
-        verify(seasons).existsByTournamentIdAndSlug(tournament.id, custom.slug)
         verify(seasons).saveAndFlush(saved)
         verifyNoMoreInteractions(tournaments, seasons)
     }
@@ -152,6 +153,9 @@ class SeasonCreateServiceTests {
             "slug" to request.copy(slug = ""),
             "slug" to request.copy(slug = "Invalid_Slug"),
             "slug" to request.copy(slug = "x".repeat(256)),
+            "nanoId" to request.copy(nanoId = "abcd"),
+            "nanoId" to request.copy(nanoId = "B0DF"),
+            "nanoId" to request.copy(nanoId = "BADF"),
             "fromYear" to request.copy(fromYear = null),
             "tournamentId" to request.copy(tournamentId = null),
         )
@@ -170,7 +174,7 @@ class SeasonCreateServiceTests {
 
     @Test
     fun `unknown tournament cannot receive a season`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.empty())
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(null)
 
         assertFailsWith<SeasonTournamentNotFoundException> {
             service.create(request)
@@ -181,7 +185,7 @@ class SeasonCreateServiceTests {
 
     @Test
     fun `existing name in the same tournament is rejected before saving`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         whenever(seasons.existsByTournamentIdAndName(tournament.id, request.name))
             .thenReturn(true)
 
@@ -194,26 +198,10 @@ class SeasonCreateServiceTests {
         verifyNoMoreInteractions(seasons)
     }
 
-    @Test
-    fun `existing slug in the same tournament is rejected before saving`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
-        whenever(seasons.existsByTournamentIdAndSlug(tournament.id, request.slug))
-            .thenReturn(true)
-
-        val failure = assertFailsWith<SeasonFieldConflictException> {
-            service.create(request)
-        }
-
-        assertEquals("slug", failure.field)
-        verify(seasons).existsByTournamentIdAndName(tournament.id, request.name)
-        verify(seasons).existsByTournamentIdAndSlug(tournament.id, request.slug)
-        verifyNoMoreInteractions(seasons)
-    }
-
     @ParameterizedTest
-    @ValueSource(strings = ["name", "slug"])
+    @ValueSource(strings = ["name"])
     fun `database uniqueness conflicts are translated for concurrent submissions`(field: String) {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         val failure = constraintFailure("seasons_tournament_${field}_unique")
         whenever(seasons.saveAndFlush(anySeason())).thenThrow(failure)
 
@@ -227,7 +215,7 @@ class SeasonCreateServiceTests {
 
     @Test
     fun `unrelated persistence failures are preserved`() {
-        whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         val failure = constraintFailure("seasons_tournament_fk")
         whenever(seasons.saveAndFlush(anySeason())).thenThrow(failure)
 
@@ -241,6 +229,20 @@ class SeasonCreateServiceTests {
 
     private fun season(name: String, slug: String, year: Int): Season =
         Season(tournament = tournament, name = name, slug = slug, fromYear = year)
+
+    @Test
+    fun `NanoID collisions fail without retrying or replacing the submitted ID`() {
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
+        val failure = constraintFailure("seasons_nano_id_key")
+        whenever(seasons.saveAndFlush(anySeason())).thenThrow(failure)
+
+        val conflict = assertFailsWith<com.abeesmall.tournup.service.NanoIdConflictException> {
+            service.create(request.copy(nanoId = "BCDF"))
+        }
+
+        assertSame(failure, conflict.cause)
+        verify(seasons).saveAndFlush(anySeason())
+    }
 
     // Java Mockito matchers return null; Kotlin needs a non-null placeholder.
     private fun anySeason(): Season =

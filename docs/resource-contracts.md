@@ -35,10 +35,56 @@ Spring Security enforces authentication and CSRF. `ResourceAccess` on concrete r
 selects the catalogue policy; its interceptor authorizes before argument conversion
 or JSON parsing. Standard CRUD and specialised endpoints use the same policy source.
 
-The existing URLs, DTOs, response envelopes, errors, reference selectors, layouts,
-and audit visibility are retained. Existing nested season URLs remain supported.
-The proposed slug-plus-short-ID locator is a separate change and is not introduced
-by this structural refactor.
+Response envelopes, errors, reference selectors, layouts, and audit visibility
+are retained. Existing nested season routes remain supported with public locators.
+Public resource IDs are now `slug-nanoID` locators. Their opaque four-character
+suffix from `23456789BCDFGHJKLMNPQRSTVWXYZ` is stored independently from the internal UUIDv7 key. Lookups use the
+suffix, so an old readable slug remains resolvable after a rename. UUID and bare-slug
+resource URLs have no legacy UUID or slug lookup fallback. Parent references, lookup results and generated
+links use public locators; internal audit keys are never serialized. Lookup cursor
+version 2 contains public NanoIDs rather than UUIDs. Season slugs may repeat
+within a tournament; season names remain unique within their tournament. Migration
+V6 removes the former season slug uniqueness constraint.
+
+Create forms return an unreserved four-character NanoID in `item.nanoId`.
+The frontend previews `slug-nanoId` and submits that same `nanoId`. Abandoned forms
+need no release. A database uniqueness collision fails with HTTP 409 and an
+`errors.nanoId` message; the server never retries or substitutes another ID. Reopen
+the create form to obtain a new candidate. Direct create requests may omit `nanoId`,
+in which case the server generates one once. NanoIDs are immutable after creation.
+Uniqueness is enforced in each resource table of the tenant database.
+
+The resource catalogue declares the locator components:
+
+```json
+{"field":"id","type":"slug-nano-id","slugField":"slug","nanoIdField":"nanoId","slugContext":[]}
+```
+
+For create forms, read the values named by `slugField` and `nanoIdField` from `item`.
+Preview `${item.slug}-${item.nanoId}` as the slug changes. `nanoId` is transport data,
+not an editable field in `manifest.fields` or the layout. Preserve it when building
+the POST payload, even when selecting editable fields from the manifest. For example:
+
+```json
+{"name":"Winter league","slug":"winter-league","fromYear":2026,"tournamentId":"winter-open-BCDF","nanoId":"GHJK"}
+```
+
+After creation, use the returned `item.id` for links rather than the preview.
+Generation, request validation, locator parsing and lookup cursors all use the same
+four-character alphabet. The frontend does not generate or edit NanoIDs.
+
+Migration V5 deliberately drops and recreates tournaments, seasons, and their two
+audit tables, as requested. It discards their records and history. Shared audit
+revisions, UI layouts and the tenant catalogue are retained. V5 retains its original
+12-character `short_id` schema and checksum for databases that already applied it.
+V7 clears the resource tables again and replaces those columns with four-character
+`nano_id` columns. Apply the pending migrations by starting with the `dev` profile;
+no Flyway repair is needed for the original V5 checksum (`-919477706`).
+
+In `dev`, tenant migration startup restores runtime CRUD grants on application tables
+and sequence access after migrations, excluding the Flyway history table. It also
+sets defaults for tables and sequences subsequently created by the migration role,
+so recreating tables does not leave tenant runtime roles without access.
 
 ## Adding a resource
 

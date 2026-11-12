@@ -11,7 +11,8 @@ import org.springframework.data.domain.Page
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface SeasonRepository : JpaRepository<Season, UUID> {
-    fun findByTournamentIdAndSlug(tournamentId: UUID, slug: String): Season?
+    fun findByNanoId(nanoId: String): Season?
+
 
     fun findAllByTournamentId(tournamentId: UUID, pageable: Pageable): Page<Season>
 
@@ -19,22 +20,20 @@ interface SeasonRepository : JpaRepository<Season, UUID> {
 
     fun existsByTournamentIdAndName(tournamentId: UUID, name: String): Boolean
 
-    fun existsByTournamentIdAndSlug(tournamentId: UUID, slug: String): Boolean
 
     fun existsByTournamentIdAndNameAndIdNot(tournamentId: UUID, name: String, id: UUID): Boolean
 
-    fun existsByTournamentIdAndSlugAndIdNot(tournamentId: UUID, slug: String, id: UUID): Boolean
 
     @Query("""
-        select new com.abeesmall.tournup.dto.ui.LookupItem(r.id, r.name)
+        select new com.abeesmall.tournup.dto.ui.LookupItem(concat(r.slug, '-', r.nanoId), r.name)
         from Season r
         where lower(r.name) like :pattern escape '!'
-          and (:afterName is null or r.name > :afterName or (r.name = :afterName and r.id > :afterId))
+          and (:afterName is null or r.name > :afterName or (r.name = :afterName and r.nanoId > :afterId))
           and (:tournamentId is null or r.tournament.id = :tournamentId)
-        order by r.name, r.id
+        order by r.name, r.nanoId
     """)
     fun lookup(
-        @Param("pattern") pattern: String, @Param("afterName") afterName: String?, @Param("afterId") afterId: UUID?,
+        @Param("pattern") pattern: String, @Param("afterName") afterName: String?, @Param("afterId") afterId: String?,
         @Param("tournamentId") tournamentId: UUID?,
         pageable: Pageable,
     ): List<LookupItem>

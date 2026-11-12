@@ -73,6 +73,23 @@ class TournamentCreateControllerTests(
     """.trimIndent()
 
     @Test
+    fun `NanoID collision returns a field conflict`() {
+        whenever(service.create(validRequest)).thenThrow(
+            com.abeesmall.tournup.service.NanoIdConflictException(RuntimeException("duplicate")),
+        )
+        mockMvc.post("/api/tournaments/") {
+            with(user("writer").roles("SUPER_ADMIN"))
+            with(csrf())
+            contentType = MediaType.APPLICATION_JSON
+            content = mapper.writeValueAsString(validRequest)
+        }.andExpect {
+            status { isConflict() }
+            jsonPath("$.errors.nanoId[0]", equalTo("NanoID is already in use. Reload the create form and try again."))
+        }
+        verifyNoInteractions(auditReader)
+    }
+
+    @Test
     fun `readers are rejected before malformed JSON is parsed`() {
         mockMvc.post("/api/tournaments/") {
             with(user("reader").roles("PLAYER"))
@@ -138,6 +155,7 @@ class TournamentCreateControllerTests(
             jsonPath("$.manifest.commands[0].method", equalTo("POST"))
             jsonPath("$.manifest.commands[0].href", equalTo("/api/tournaments/"))
 
+            jsonPath("$.item.nanoId", org.hamcrest.Matchers.matchesPattern("[23456789BCDFGHJKLMNPQRSTVWXYZ]{4}"))
             jsonPath("$.item.name", equalTo(""))
             jsonPath("$.item.slug", equalTo(""))
             jsonPath("$.item.participantType", equalTo("PLAYER"))
@@ -156,14 +174,13 @@ class TournamentCreateControllerTests(
         val id = UUID.randomUUID()
         val response = ResourceRecord(
             item = TournamentData(
-                id = id,
+                internalId = id,
                 slug = validRequest.slug,
                 name = validRequest.name,
                 description = validRequest.description,
                 participantType = validRequest.participantType,
                 participationMode = validRequest.participationMode,
-                handicapMode = validRequest.handicapMode,
-            ),
+                handicapMode = validRequest.handicapMode, nanoId = "BCDF"),
         )
         whenever(service.create(validRequest)).thenReturn(response)
         val actorId = UUID.randomUUID()
@@ -178,9 +195,9 @@ class TournamentCreateControllerTests(
             content = validBody
         }.andExpect {
             status { isCreated() }
-            header { string("Location", "/api/tournaments/$id/") }
+            header { string("Location", "/api/tournaments/winter-open-BCDF/") }
             jsonPath("$.manifest.operation", equalTo("read"))
-            jsonPath("$.item.id", equalTo(id.toString()))
+            jsonPath("$.item.id", equalTo("winter-open-BCDF"))
             jsonPath("$.item.name", equalTo("Winter Open"))
             jsonPath("$.item.slug", equalTo("winter-open"))
             jsonPath("$.item.handicapMode", equalTo("CARRY_FORWARD"))

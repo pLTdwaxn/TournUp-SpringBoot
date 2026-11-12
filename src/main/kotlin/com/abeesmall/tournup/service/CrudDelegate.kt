@@ -11,7 +11,6 @@ import com.abeesmall.tournup.ui.UiManifestContext
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.resource.UiResourceRegistration
 import java.net.URI
-import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -26,12 +25,6 @@ data class ResourceRequest(
     val size: Int = 20,
     val parentIdentifier: String? = null,
 ) {
-    fun uuid(name: String): UUID? = query[name]?.takeIf { it.isNotEmpty() }?.let {
-        try { UUID.fromString(it) } catch (_: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid $name")
-        }
-    }
-
     fun requireApplication(): UiApplication = UiApplication.fromHeader(application ?: throw ResponseStatusException(
         HttpStatus.BAD_REQUEST, "Missing $UI_APPLICATION_HEADER header",
     )) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown $UI_APPLICATION_HEADER value")
@@ -46,8 +39,8 @@ class CrudDelegate<C : Any, U : Any, R : AuditedResource<R>>(
     private val listRecords: (ResourceRequest) -> Page<R>,
     private val findRecord: (String, ResourceRequest) -> ResourceRecord<R>?,
     private val createRecord: (C, ResourceRequest) -> ResourceRecord<R>,
-    private val updateRecord: (UUID, U, ResourceRequest) -> ResourceRecord<R>?,
-    private val editFormData: (UUID, ResourceRequest) -> ResourceRecord<U>?,
+    private val updateRecord: (String, U, ResourceRequest) -> ResourceRecord<R>?,
+    private val editFormData: (String, ResourceRequest) -> ResourceRecord<U>?,
     private val createFormData: (ResourceRequest) -> ResourceRecord<C>,
     private val application: (ResourceRequest, UiOperation) -> UiApplication = { _, _ -> UiApplication.TOURNAMENT_MANAGER },
     private val relatedIds: (ResourceRequest) -> Map<String, String> = { emptyMap() },
@@ -69,7 +62,7 @@ class CrudDelegate<C : Any, U : Any, R : AuditedResource<R>>(
         return response.body(result)
     }
 
-    fun update(id: UUID, input: U, context: ResourceRequest): UiRecordResponse<R> {
+    fun update(id: String, input: U, context: ResourceRequest): UiRecordResponse<R> {
         return record(updateRecord(id, input, context) ?: missing(), context)
     }
 
@@ -78,8 +71,8 @@ class CrudDelegate<C : Any, U : Any, R : AuditedResource<R>>(
         return responses.form(registration, createFormData(context), manifest)
     }
 
-    fun editForm(id: UUID, context: ResourceRequest): UiRecordResponse<U> = responses.form(
-        registration, editFormData(id, context) ?: missing(), manifestContext(context, UiOperation.UPDATE, recordId = id.toString()),
+    fun editForm(id: String, context: ResourceRequest): UiRecordResponse<U> = responses.form(
+        registration, editFormData(id, context) ?: missing(), manifestContext(context, UiOperation.UPDATE, recordId = id),
     )
 
     private fun record(result: ResourceRecord<R>, request: ResourceRequest): UiRecordResponse<R> =

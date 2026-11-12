@@ -44,6 +44,7 @@ data class UiResourceIdentifier(
     val type: String,
     val slugField: String? = null,
     val slugContext: List<String> = emptyList(),
+    val nanoIdField: String? = null,
 )
 
 data class UiResourceRelationship(

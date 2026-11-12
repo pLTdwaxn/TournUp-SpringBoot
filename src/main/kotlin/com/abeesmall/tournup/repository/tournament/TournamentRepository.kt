@@ -10,18 +10,20 @@ import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface TournamentRepository : JpaRepository<Tournament, UUID> {
+    fun findByNanoId(nanoId: String): Tournament?
+
 
     fun findBySlug(slug: String): Tournament?
 
     @Query("""
-        select new com.abeesmall.tournup.dto.ui.LookupItem(r.id, r.name)
+        select new com.abeesmall.tournup.dto.ui.LookupItem(concat(r.slug, '-', r.nanoId), r.name)
         from Tournament r
         where lower(r.name) like :pattern escape '!'
-          and (:afterName is null or r.name > :afterName or (r.name = :afterName and r.id > :afterId))
-        order by r.name, r.id
+          and (:afterName is null or r.name > :afterName or (r.name = :afterName and r.nanoId > :afterId))
+        order by r.name, r.nanoId
     """)
     fun lookup(
-        @Param("pattern") pattern: String, @Param("afterName") afterName: String?, @Param("afterId") afterId: UUID?,
+        @Param("pattern") pattern: String, @Param("afterName") afterName: String?, @Param("afterId") afterId: String?,
         pageable: Pageable,
     ): List<LookupItem>
 }

@@ -1,7 +1,6 @@
 package com.abeesmall.tournup.service
 
 import com.abeesmall.tournup.dto.ui.LookupItem
-import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -13,14 +12,14 @@ import org.springframework.web.server.ResponseStatusException
 class ResourceQueriesTests {
     @Test
     fun `cursor continues after the last returned item and binds search and resource context`() {
-        val rows = listOf("Alpha", "Alpha", "Beta").map { LookupItem(UUID.randomUUID(), it) }
+        val rows = listOf("Alpha", "Alpha", "Beta").map { LookupItem("item-" + com.abeesmall.tournup.model.ResourceIdentifiers.nanoId(), it) }
         val first = LookupQuery.parse("tournament", " AL ", 2, null)
         val response = first.response(rows)
         assertEquals(rows.take(2), response.items)
         val cursor = assertNotNull(response.nextCursor)
         val next = LookupQuery.parse("tournament", "al", 2, cursor)
         assertEquals(rows[1].name, next.afterName)
-        assertEquals(rows[1].id, next.afterId)
+        assertEquals(com.abeesmall.tournup.model.ResourceIdentifiers.nanoId(rows[1].id), next.afterId)
         assertEquals(3, next.pageable.pageSize)
         assertNull(next.response(emptyList()).nextCursor)
         assertFailsWith<ResponseStatusException> { LookupQuery.parse("season", "al", 2, cursor) }

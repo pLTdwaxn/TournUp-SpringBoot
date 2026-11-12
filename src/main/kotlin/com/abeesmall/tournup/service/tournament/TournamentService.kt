@@ -6,12 +6,12 @@ import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
 import com.abeesmall.tournup.dto.ui.LookupResponse
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.service.nanoIdConflict
 import com.abeesmall.tournup.service.LookupQuery
 import com.abeesmall.tournup.service.ResourceRecord
-import com.abeesmall.tournup.service.parseRecordId
+import com.abeesmall.tournup.model.ResourceIdentifiers
 import com.abeesmall.tournup.validation.WriteValidator
 import jakarta.validation.Validator
-import java.util.UUID
 import org.hibernate.exception.ConstraintViolationException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.Page
@@ -42,6 +42,7 @@ class TournamentService(
 
         val tournament = save(
             Tournament(
+                nanoId = request.nanoId ?: ResourceIdentifiers.nanoId(),
                 slug = request.slug,
                 name = request.name,
                 description = request.description,
@@ -56,12 +57,7 @@ class TournamentService(
 
     @Transactional(readOnly = true)
     fun find(identifier: String): ResourceRecord<TournamentData>? {
-        val id = parseRecordId(identifier)
-        val tournament = if (id != null) {
-            tournaments.findById(id).orElse(null)
-        } else {
-            tournaments.findBySlug(identifier)
-        } ?: return null
+        val tournament = ResourceIdentifiers.nanoId(identifier)?.let(tournaments::findByNanoId) ?: return null
 
         return ResourceRecord(tournament.toData())
     }
@@ -70,8 +66,8 @@ class TournamentService(
     fun list(pageable: Pageable): Page<TournamentData> = tournaments.findAll(pageable).map { it.toData() }
 
     @Transactional(readOnly = true)
-    fun editForm(id: UUID): ResourceRecord<TournamentUpdateRequest>? {
-        val tournament = tournaments.findById(id).orElse(null)
+    fun editForm(id: String): ResourceRecord<TournamentUpdateRequest>? {
+        val tournament = ResourceIdentifiers.nanoId(id)?.let(tournaments::findByNanoId)
             ?: return null
 
         return ResourceRecord(
@@ -88,15 +84,15 @@ class TournamentService(
 
     @Transactional
     fun update(
-        id: UUID,
+        id: String,
         request: TournamentUpdateRequest,
     ): ResourceRecord<TournamentData>? {
         WriteValidator.validate(validator, request)
-        val tournament = tournaments.findById(id).orElse(null)
+        val tournament = ResourceIdentifiers.nanoId(id)?.let(tournaments::findByNanoId)
             ?: return null
 
         val slugOwner = tournaments.findBySlug(request.slug)
-        if (slugOwner != null && slugOwner.id != id) {
+        if (slugOwner != null && slugOwner.id != tournament.id) {
             throw TournamentSlugConflictException()
         }
 
@@ -115,6 +111,7 @@ class TournamentService(
     private fun save(tournament: Tournament): Tournament = try {
         tournaments.saveAndFlush(tournament)
     } catch (failure: DataIntegrityViolationException) {
+        nanoIdConflict(failure)?.let { throw it }
         val slugConflict = generateSequence<Throwable>(failure) { it.cause }
             .filterIsInstance<ConstraintViolationException>()
             .any { it.constraintName == "tournaments_slug_unique" }

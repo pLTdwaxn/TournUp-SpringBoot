@@ -50,18 +50,18 @@ class TournamentUpdateServiceTests {
     @Test
     fun `invalid direct updates fail before loading or changing records`() {
         for (invalid in listOf(request.copy(name = " "), request.copy(slug = "Invalid_Slug"))) {
-            assertFailsWith<jakarta.validation.ConstraintViolationException> { service.update(existing.id, invalid) }
+            assertFailsWith<jakarta.validation.ConstraintViolationException> { service.update(existing.locator, invalid) }
         }
         org.mockito.Mockito.verifyNoInteractions(tournaments)
     }
 
     @Test
     fun `replaces editable fields while preserving the id`() {
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.of(existing))
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(existing)
         whenever(tournaments.saveAndFlush(existing)).thenReturn(existing)
 
-        val response = assertNotNull(service.update(existing.id, request))
+        val response = assertNotNull(service.update(existing.locator, request))
 
         assertEquals(request.name, existing.name)
         assertEquals(request.slug, existing.slug)
@@ -72,18 +72,17 @@ class TournamentUpdateServiceTests {
 
         assertEquals(
             TournamentData(
-                id = existing.id,
+                internalId = existing.id,
                 name = request.name,
                 slug = request.slug,
                 description = request.description,
                 participantType = request.participantType,
                 participationMode = request.participationMode,
-                handicapMode = request.handicapMode,
-            ),
+                handicapMode = request.handicapMode, nanoId = existing.nanoId),
             response.item,
         )
 
-        verify(tournaments).findById(existing.id)
+        verify(tournaments).findByNanoId(existing.nanoId)
         verify(tournaments).findBySlug(request.slug)
         verify(tournaments).saveAndFlush(existing)
         verifyNoMoreInteractions(tournaments)
@@ -92,42 +91,42 @@ class TournamentUpdateServiceTests {
     @Test
     fun `allows keeping the current slug`() {
         val unchangedSlug = request.copy(slug = existing.slug)
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.of(existing))
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(existing)
         whenever(tournaments.findBySlug(existing.slug)).thenReturn(existing)
         whenever(tournaments.saveAndFlush(existing)).thenReturn(existing)
 
-        assertNotNull(service.update(existing.id, unchangedSlug))
+        assertNotNull(service.update(existing.locator, unchangedSlug))
 
         verify(tournaments).saveAndFlush(existing)
     }
 
     @Test
     fun `returns null for a missing tournament without saving`() {
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.empty())
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(null)
 
-        assertNull(service.update(existing.id, request))
+        assertNull(service.update(existing.locator, request))
 
-        verify(tournaments).findById(existing.id)
+        verify(tournaments).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(tournaments)
     }
 
     @Test
     fun `rejects another tournament's slug before changing data`() {
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.of(existing))
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(existing)
         whenever(tournaments.findBySlug(request.slug)).thenReturn(
             Tournament(slug = request.slug, name = "Another tournament"),
         )
 
         assertFailsWith<TournamentSlugConflictException> {
-            service.update(existing.id, request)
+            service.update(existing.locator, request)
         }
 
         assertEquals("original", existing.slug)
         assertEquals("Original tournament", existing.name)
-        verify(tournaments).findById(existing.id)
+        verify(tournaments).findByNanoId(existing.nanoId)
         verify(tournaments).findBySlug(request.slug)
         verifyNoMoreInteractions(tournaments)
     }
@@ -135,12 +134,12 @@ class TournamentUpdateServiceTests {
     @Test
     fun `translates a database slug constraint failure`() {
         val failure = constraintFailure("tournaments_slug_unique")
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.of(existing))
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(existing)
         whenever(tournaments.saveAndFlush(existing)).thenThrow(failure)
 
         val conflict = assertFailsWith<TournamentSlugConflictException> {
-            service.update(existing.id, request)
+            service.update(existing.locator, request)
         }
 
         assertSame(failure, conflict.cause)
@@ -149,12 +148,12 @@ class TournamentUpdateServiceTests {
     @Test
     fun `preserves unrelated persistence failures`() {
         val failure = constraintFailure("another_unique_constraint")
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.of(existing))
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(existing)
         whenever(tournaments.saveAndFlush(existing)).thenThrow(failure)
 
         val thrown = assertFailsWith<DataIntegrityViolationException> {
-            service.update(existing.id, request)
+            service.update(existing.locator, request)
         }
 
         assertSame(failure, thrown)
@@ -166,10 +165,10 @@ class TournamentUpdateServiceTests {
         existing.participationMode = ParticipationMode.REGISTRATION
         existing.handicapMode = HandicapMode.CARRY_FORWARD
 
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.of(existing))
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(existing)
 
-        val response = assertNotNull(service.editForm(existing.id))
+        val response = assertNotNull(service.editForm(existing.locator))
 
         assertEquals(
             TournamentUpdateRequest(
@@ -183,18 +182,18 @@ class TournamentUpdateServiceTests {
             response.item,
         )
 
-        verify(tournaments).findById(existing.id)
+        verify(tournaments).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(tournaments)
     }
 
     @Test
     fun `edit form returns null for a missing tournament`() {
-        whenever(tournaments.findById(existing.id))
-            .thenReturn(Optional.empty())
+        whenever(tournaments.findByNanoId(existing.nanoId))
+            .thenReturn(null)
 
-        assertNull(service.editForm(existing.id))
+        assertNull(service.editForm(existing.locator))
 
-        verify(tournaments).findById(existing.id)
+        verify(tournaments).findByNanoId(existing.nanoId)
         verifyNoMoreInteractions(tournaments)
     }
 

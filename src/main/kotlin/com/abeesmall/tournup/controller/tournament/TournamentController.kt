@@ -20,9 +20,9 @@ import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.resource.ResourceAction
 import jakarta.servlet.http.HttpServletResponse
+import com.abeesmall.tournup.validation.ResourceLocator
 import jakarta.validation.Valid
 import java.net.URI
-import java.util.UUID
 import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -81,7 +81,7 @@ class TournamentController(private val service: TournamentService, responses: Re
 
     @GetMapping("/api/tournaments/{id}/edit/")
     @ResourceAccess(ResourceAction.UPDATE_FORM, "tournaments")
-    fun editForm(@PathVariable id: UUID,
+    fun editForm(@ResourceLocator @PathVariable id: String,
                  authentication: Authentication): UiRecordResponse<TournamentUpdateRequest> =
         crud.editForm(id, ResourceRequest(authentication))
 
@@ -93,7 +93,7 @@ class TournamentController(private val service: TournamentService, responses: Re
 
     @PutMapping("/api/tournaments/{id}/")
     @ResourceAccess(ResourceAction.UPDATE, "tournaments")
-    fun update(@PathVariable id: UUID, @Valid @RequestBody body: TournamentUpdateRequest,
+    fun update(@ResourceLocator @PathVariable id: String, @Valid @RequestBody body: TournamentUpdateRequest,
                authentication: Authentication): UiRecordResponse<TournamentData> =
         crud.update(id, body, ResourceRequest(authentication))
 

@@ -2,12 +2,12 @@ package com.abeesmall.tournup.controller
 
 import com.abeesmall.tournup.controller.season.SeasonController
 import com.abeesmall.tournup.controller.tournament.TournamentController
-import com.abeesmall.tournup.service.RecordContextRequiredException
 import com.abeesmall.tournup.service.season.SeasonFieldConflictException
 import com.abeesmall.tournup.service.season.SeasonTournamentChangeException
 import com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException
 import com.abeesmall.tournup.service.tournament.TournamentSlugConflictException
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
+import com.abeesmall.tournup.service.NanoIdConflictException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
 import org.springframework.beans.factory.ObjectProvider
@@ -17,9 +17,25 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.HandlerMethodValidationException
+import org.springframework.validation.method.ParameterErrors
 
 @RestControllerAdvice(assignableTypes = [SeasonController::class, TournamentController::class])
 class ResourceExceptionHandler(private val registry: ObjectProvider<UiResourceRegistry>) {
+    @ExceptionHandler(HandlerMethodValidationException::class)
+    fun invalidMethod(
+        exception: HandlerMethodValidationException,
+        request: HttpServletRequest,
+    ): ProblemDetail = validationProblem(
+        exception.parameterValidationResults.flatMap { result ->
+            if (result is ParameterErrors) {
+                result.fieldErrors.map { it.field to (it.defaultMessage ?: "Invalid value") }
+            } else result.resolvableErrors.map {
+                (result.methodParameter.parameterName ?: "request") to (it.defaultMessage ?: "Invalid value")
+            }
+        }.groupBy({ it.first }, { it.second }), request,
+    )
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun invalidRequest(exception: MethodArgumentNotValidException, request: HttpServletRequest): ProblemDetail =
         validationProblem(
@@ -44,9 +60,9 @@ class ResourceExceptionHandler(private val registry: ObjectProvider<UiResourceRe
     fun tournamentChange(exception: SeasonTournamentChangeException, request: HttpServletRequest): ProblemDetail =
         validationProblem(mapOf("tournamentId" to listOf(exception.message.orEmpty())), request)
 
-    @ExceptionHandler(RecordContextRequiredException::class)
-    fun missingContext(exception: RecordContextRequiredException): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.message.orEmpty())
+    @ExceptionHandler(NanoIdConflictException::class)
+    fun nanoIdConflict(exception: NanoIdConflictException): ProblemDetail =
+        conflict("nanoId", exception.message.orEmpty())
 
     @ExceptionHandler(SeasonFieldConflictException::class)
     fun seasonConflict(exception: SeasonFieldConflictException): ProblemDetail =

@@ -48,13 +48,13 @@ class SeasonCreateControllerTests(
     @MockitoBean
     private lateinit var auditReader: LatestAuditReader
 
-    private val tournamentId = UUID.randomUUID()
+    private val tournamentId = "winter-open-BCDF"
     private val formUrl = "/api/seasons/create/"
     private val prefilledUrl = "$formUrl?tournamentId=$tournamentId"
     private val createUrl = "/api/seasons/"
     private val namingUrl = "/api/seasons/naming-context/?tournamentId=$tournamentId"
     private val request = SeasonWriteRequest("2026 S4", "2026-s4", 2026, tournamentId)
-    private val created = SeasonData(UUID.randomUUID(), tournamentId, "2026 S4", "2026-s4", 2026)
+    private val created = SeasonData(UUID.randomUUID(), tournamentId, "2026 S4", "2026-s4", 2026, nanoId = "BCDF")
     private val createdResponse = ResourceRecord(
         item = created,
         included = mapOf("tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open"))),
@@ -104,8 +104,8 @@ class SeasonCreateControllerTests(
     fun `writers create a season and receive its read manifest and committed audit`(role: String) {
         val actorId = UUID.randomUUID()
         whenever(service.create(request)).thenReturn(createdResponse)
-        whenever(auditReader.findLatest(Season::class.java, listOf(created.id))).thenReturn(
-            mapOf(created.id to LastAuditData(42, Instant.parse("2026-11-10T00:00:00Z"), actorId)),
+        whenever(auditReader.findLatest(Season::class.java, listOf(created.internalId))).thenReturn(
+            mapOf(created.internalId to LastAuditData(42, Instant.parse("2026-11-10T00:00:00Z"), actorId)),
         )
 
         mockMvc.post(createUrl) {
@@ -130,7 +130,7 @@ class SeasonCreateControllerTests(
             jsonPath("$.manifest.fields.name.editable", equalTo(false))
             jsonPath("$.manifest.fields.slug.editable", equalTo(false))
             jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/${created.id}/edit/"))
-            jsonPath("$.item.id", equalTo(created.id.toString()))
+            jsonPath("$.item.id", equalTo(created.id))
             jsonPath("$.item.tournamentId", equalTo(tournamentId.toString()))
             jsonPath("$.item.name", equalTo(request.name))
             jsonPath("$.item.slug", equalTo(request.slug))
@@ -143,14 +143,31 @@ class SeasonCreateControllerTests(
 
         val ordered = inOrder(service, auditReader)
         ordered.verify(service).create(request)
-        ordered.verify(auditReader).findLatest(Season::class.java, listOf(created.id))
+        ordered.verify(auditReader).findLatest(Season::class.java, listOf(created.internalId))
         ordered.verifyNoMoreInteractions()
+    }
+
+    @Test
+    fun `NanoID collision returns a field conflict`() {
+        whenever(service.create(request)).thenThrow(
+            com.abeesmall.tournup.service.NanoIdConflictException(RuntimeException("duplicate")),
+        )
+        mockMvc.post("/api/seasons/") {
+            with(user("writer").roles("SUPER_ADMIN"))
+            with(csrf())
+            contentType = MediaType.APPLICATION_JSON
+            content = mapper.writeValueAsString(request)
+        }.andExpect {
+            status { isConflict() }
+            jsonPath("$.errors.nanoId[0]", equalTo("NanoID is already in use. Reload the create form and try again."))
+        }
+        verifyNoInteractions(auditReader)
     }
 
     @Test
     fun `missing audit history is explicitly null`() {
         whenever(service.create(request)).thenReturn(createdResponse)
-        whenever(auditReader.findLatest(Season::class.java, listOf(created.id))).thenReturn(emptyMap())
+        whenever(auditReader.findLatest(Season::class.java, listOf(created.internalId))).thenReturn(emptyMap())
 
         mockMvc.post(createUrl) {
             with(user("writer").roles("SUPER_ADMIN"))
@@ -260,7 +277,7 @@ class SeasonCreateControllerTests(
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["name", "slug"])
+    @ValueSource(strings = ["name"])
     fun `duplicate fields return conflict errors`(field: String) {
         whenever(service.create(request)).thenThrow(SeasonFieldConflictException(field))
 
@@ -328,7 +345,7 @@ class SeasonCreateControllerTests(
             with(user("writer").roles("SUPER_ADMIN"))
             header(UI_APPLICATION_HEADER, "unknown-app")
         }.andExpect { status { isBadRequest() } }
-        mockMvc.get("$formUrl?tournamentId=not-a-uuid") {
+        mockMvc.get("$formUrl?tournamentId=invalid") {
             with(user("writer").roles("SUPER_ADMIN"))
             header(UI_APPLICATION_HEADER, "tournament-manager")
         }.andExpect { status { isBadRequest() } }

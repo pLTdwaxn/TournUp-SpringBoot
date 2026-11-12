@@ -5,6 +5,7 @@
 biz.aQute.bnd:biz.aQute.bnd.annotation:7.1.0=compileClasspath,testCompileClasspath,toolsCompileClasspath
 ch.qos.logback:logback-classic:1.5.38=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath,toolsCompileClasspath,toolsRuntimeClasspath
 ch.qos.logback:logback-core:1.5.38=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath,toolsCompileClasspath,toolsRuntimeClasspath
+com.aventrix.jnanoid:jnanoid:2.0.0=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath,toolsCompileClasspath,toolsRuntimeClasspath
 com.fasterxml.jackson.core:jackson-annotations:2.21=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath,toolsCompileClasspath,toolsRuntimeClasspath
 com.fasterxml:classmate:1.7.3=compileClasspath,productionRuntimeClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath,toolsCompileClasspath,toolsRuntimeClasspath
 com.github.docker-java:docker-java-api:3.7.1=testCompileClasspath,testRuntimeClasspath

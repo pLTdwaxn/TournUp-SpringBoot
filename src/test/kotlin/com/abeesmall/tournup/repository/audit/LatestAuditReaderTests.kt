@@ -64,12 +64,13 @@ class LatestAuditReaderTests {
         for (id in listOf(first, second, unrequested, withoutHistory)) {
             jdbc.update(
                 """
-                INSERT INTO tournaments (id, slug, name)
-                VALUES (?, ?, ?)
+                INSERT INTO tournaments (id, slug, name, nano_id)
+                VALUES (?, ?, ?, ?)
                 """.trimIndent(),
                 id,
                 "fixture-$id",
                 "Fixture tournament",
+                com.abeesmall.tournup.model.ResourceIdentifiers.nanoId(),
             )
         }
 

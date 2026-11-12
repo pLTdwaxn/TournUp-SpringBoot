@@ -9,7 +9,6 @@ import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
-import java.util.UUID
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when` as whenever
@@ -32,8 +31,8 @@ class ResourceLookupControllerTests(@Autowired private val mvc: MockMvc) {
 
     @Test
     fun `lookup returns lightweight batches without page manifests or audits`() {
-        val id = UUID.randomUUID()
-        val parent = UUID.randomUUID()
+        val id = "item-BCDF"
+        val parent = "parent-BCDF"
         whenever(tournaments.lookup("winter", 20, null)).thenReturn(LookupResponse(listOf(LookupItem(id, "Winter Open")), null))
         whenever(seasons.lookup("2026", 20, null, parent)).thenReturn(LookupResponse(listOf(LookupItem(id, "2026 S1")), "next"))
         mvc.get("/api/tournaments/lookup/?q=winter") {

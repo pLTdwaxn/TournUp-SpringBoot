@@ -17,8 +17,8 @@ import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.resource.ResourceAction
 import jakarta.servlet.http.HttpServletResponse
+import com.abeesmall.tournup.validation.ResourceLocator
 import jakarta.validation.Valid
-import java.util.UUID
 import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -36,12 +36,12 @@ class SeasonController(private val service: SeasonService, responses: ResourceRe
     private val crud = CrudDelegate<SeasonWriteRequest, SeasonWriteRequest, SeasonData>(
         seasonResourceDefinition(), responses, Season::class.java,
         title = { it.name },
-        listRecords = { service.list(it.parentIdentifier?.let(UUID::fromString), resourcePage(it.page, it.size, Sort.by(Sort.Order.desc("fromYear"), Sort.Order.asc("name"), Sort.Order.asc("id")))) },
+        listRecords = { service.list(it.parentIdentifier, resourcePage(it.page, it.size, Sort.by(Sort.Order.desc("fromYear"), Sort.Order.asc("name"), Sort.Order.asc("id")))) },
         findRecord = { id, context -> service.find(id, context.parentIdentifier) },
         createRecord = { input, _ -> service.create(input) },
-        updateRecord = { id, input, context -> service.update(id, input, context.parentIdentifier?.let(UUID::fromString)) },
-        editFormData = { id, context -> service.editForm(id, context.parentIdentifier?.let(UUID::fromString)) },
-        createFormData = { service.createForm(it.uuid("tournamentId")) },
+        updateRecord = { id, input, context -> service.update(id, input, context.parentIdentifier) },
+        editFormData = { id, context -> service.editForm(id, context.parentIdentifier) },
+        createFormData = { service.createForm(it.query["tournamentId"]) },
         application = { context, operation -> if (operation == UiOperation.CREATE) context.requireApplication() else UiApplication.TOURNAMENT_MANAGER },
         relatedIds = { it.parentIdentifier?.let { id -> mapOf("tournamentId" to id) }.orEmpty() },
     )
@@ -69,6 +69,7 @@ class SeasonController(private val service: SeasonService, responses: ResourceRe
     @GetMapping("/api/seasons/create/")
     @ResourceAccess(ResourceAction.CREATE_FORM, "seasons")
     fun createForm(
+        @ResourceLocator @RequestParam(required = false) tournamentId: String?,
         @RequestParam query: Map<String, String>,
         @RequestHeader(name = UI_APPLICATION_HEADER, required = false) application: String?,
         authentication: Authentication,
@@ -77,7 +78,7 @@ class SeasonController(private val service: SeasonService, responses: ResourceRe
 
     @GetMapping("/api/seasons/{id}/edit/")
     @ResourceAccess(ResourceAction.UPDATE_FORM, "seasons")
-    fun editForm(@PathVariable id: UUID,
+    fun editForm(@ResourceLocator @PathVariable id: String,
                  authentication: Authentication): UiRecordResponse<SeasonWriteRequest> =
         crud.editForm(id, ResourceRequest(authentication))
 
@@ -89,7 +90,7 @@ class SeasonController(private val service: SeasonService, responses: ResourceRe
 
     @PutMapping("/api/seasons/{id}/")
     @ResourceAccess(ResourceAction.UPDATE, "seasons")
-    fun update(@PathVariable id: UUID, @Valid @RequestBody body: SeasonWriteRequest,
+    fun update(@ResourceLocator @PathVariable id: String, @Valid @RequestBody body: SeasonWriteRequest,
                authentication: Authentication): UiRecordResponse<SeasonData> =
         crud.update(id, body, ResourceRequest(authentication))
 
@@ -99,12 +100,12 @@ class SeasonController(private val service: SeasonService, responses: ResourceRe
         @RequestParam(defaultValue = "") q: String,
         @RequestParam(defaultValue = "20") limit: Int,
         @RequestParam(required = false) cursor: String?,
-        @RequestParam(required = false) tournamentId: UUID?,
+        @ResourceLocator @RequestParam(required = false) tournamentId: String?,
     ) = service.lookup(q, limit, cursor, tournamentId)
 
     @GetMapping("/api/seasons/naming-context/")
     @ResourceAccess(ResourceAction.CREATE_FORM, "seasons")
-    fun namingContext(@RequestParam tournamentId: UUID) = service.namingContext(tournamentId)
+    fun namingContext(@ResourceLocator @RequestParam tournamentId: String) = service.namingContext(tournamentId)
 
     // The retired nested create URL must not be interpreted as a Season slug.
     @GetMapping("/api/tournaments/{tournamentIdentifier}/seasons/{identifier:(?!create$).+}/")
@@ -115,18 +116,18 @@ class SeasonController(private val service: SeasonService, responses: ResourceRe
 
     @GetMapping("/api/tournaments/{tournamentId}/seasons/")
     @ResourceAccess(ResourceAction.LIST, "seasons")
-    fun list(@PathVariable tournamentId: UUID, @RequestParam(defaultValue = "0") page: Int,
+    fun list(@ResourceLocator @PathVariable tournamentId: String, @RequestParam(defaultValue = "0") page: Int,
              @RequestParam(defaultValue = "20") size: Int, authentication: Authentication) =
-        crud.list(ResourceRequest(authentication, page = page, size = size, parentIdentifier = tournamentId.toString()))
+        crud.list(ResourceRequest(authentication, page = page, size = size, parentIdentifier = tournamentId))
 
     @GetMapping("/api/tournaments/{tournamentId}/seasons/{seasonId}/edit/")
     @ResourceAccess(ResourceAction.UPDATE_FORM, "seasons")
-    fun form(@PathVariable seasonId: UUID, @PathVariable tournamentId: UUID, authentication: Authentication) =
-        crud.editForm(seasonId, ResourceRequest(authentication, parentIdentifier = tournamentId.toString()))
+    fun form(@ResourceLocator @PathVariable seasonId: String, @ResourceLocator @PathVariable tournamentId: String, authentication: Authentication) =
+        crud.editForm(seasonId, ResourceRequest(authentication, parentIdentifier = tournamentId))
 
     @PutMapping("/api/tournaments/{tournamentId}/seasons/{seasonId}/")
     @ResourceAccess(ResourceAction.UPDATE, "seasons")
-    fun update(@PathVariable seasonId: UUID, @PathVariable tournamentId: UUID,
+    fun update(@ResourceLocator @PathVariable seasonId: String, @ResourceLocator @PathVariable tournamentId: String,
                @Valid @RequestBody request: SeasonWriteRequest, authentication: Authentication) =
-        crud.update(seasonId, request, ResourceRequest(authentication, parentIdentifier = tournamentId.toString()))
+        crud.update(seasonId, request, ResourceRequest(authentication, parentIdentifier = tournamentId))
 }

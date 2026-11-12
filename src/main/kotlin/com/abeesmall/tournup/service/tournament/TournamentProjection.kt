@@ -5,7 +5,8 @@ import com.abeesmall.tournup.model.tournament.Tournament
 
 
 internal fun Tournament.toData(): TournamentData = TournamentData(
-    id = id,
+    internalId = id,
+    nanoId = nanoId,
     slug = slug,
     name = name,
     description = description,
@@ -15,4 +16,4 @@ internal fun Tournament.toData(): TournamentData = TournamentData(
 )
 
 internal fun Tournament.includedReference(): Map<String, List<Map<String, Any>>> =
-    mapOf("tournament" to listOf(mapOf("id" to id, "name" to name)))
+    mapOf("tournament" to listOf(mapOf("id" to com.abeesmall.tournup.model.ResourceIdentifiers.locator(slug, nanoId), "name" to name)))

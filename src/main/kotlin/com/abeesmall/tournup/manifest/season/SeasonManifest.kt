@@ -57,7 +57,7 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
         label = "Seasons",
         displayField = "name",
         presentation = seasonFieldPresentation(),
-        identifier = UiResourceIdentifier("id", "uuid", slugField = "slug", slugContext = listOf("tournamentId")),
+        identifier = UiResourceIdentifier("id", "slug-nano-id", slugField = "slug", nanoIdField = "nanoId"),
         relationships = listOf(UiResourceRelationship("tournamentId", "tournament", "Tournament", true)),
         operations = listOf(
             UiResourceOperation("list", UiOperation.LIST, UiCommandMethod.GET, "/api/seasons/"),
@@ -66,10 +66,6 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
                 "/api/tournaments/{tournamentId}/seasons/", listOf("tournamentId"),
             ),
             UiResourceOperation("read", UiOperation.READ, UiCommandMethod.GET, "/api/seasons/{id}/"),
-            UiResourceOperation(
-                "read-by-slug", UiOperation.READ, UiCommandMethod.GET,
-                "/api/tournaments/{tournamentId}/seasons/{slug}/", listOf("tournamentId"),
-            ),
             UiResourceOperation(
                 "create-form", UiOperation.CREATE, UiCommandMethod.GET,
                 "/api/seasons/create/",

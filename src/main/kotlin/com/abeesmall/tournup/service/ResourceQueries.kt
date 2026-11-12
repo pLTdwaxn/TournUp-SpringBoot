@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.service
 
+import com.abeesmall.tournup.model.ResourceIdentifiers
 import com.abeesmall.tournup.dto.ui.LookupItem
 import com.abeesmall.tournup.dto.ui.LookupResponse
 import java.io.ByteArrayInputStream
@@ -8,7 +9,6 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.Base64
 import java.util.Locale
-import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
@@ -25,7 +25,7 @@ class LookupQuery private constructor(
     private val search: String,
     val limit: Int,
     val afterName: String?,
-    val afterId: UUID?,
+    val afterId: String?,
 ) {
     val pattern: String = "%" + search.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
     val pageable: PageRequest = PageRequest.of(0, limit + 1)
@@ -36,12 +36,11 @@ class LookupQuery private constructor(
             val last = items.last()
             val bytes = ByteArrayOutputStream()
             DataOutputStream(bytes).use {
-                it.writeInt(1)
+                it.writeInt(2)
                 it.writeUTF(scope)
                 it.writeUTF(search)
                 it.writeUTF(last.name)
-                it.writeLong(last.id.mostSignificantBits)
-                it.writeLong(last.id.leastSignificantBits)
+                it.writeUTF(requireNotNull(ResourceIdentifiers.nanoId(last.id)))
             }
             Base64.getUrlEncoder().withoutPadding().encodeToString(bytes.toByteArray())
         } else null
@@ -57,9 +56,10 @@ class LookupQuery private constructor(
             try {
                 require(cursor.length <= 4096)
                 DataInputStream(ByteArrayInputStream(Base64.getUrlDecoder().decode(cursor))).use {
-                    require(it.readInt() == 1 && it.readUTF() == scope && it.readUTF() == search)
+                    require(it.readInt() == 2 && it.readUTF() == scope && it.readUTF() == search)
                     val name = it.readUTF()
-                    val id = UUID(it.readLong(), it.readLong())
+                    val id = it.readUTF()
+                    require(id.matches(Regex(ResourceIdentifiers.NANO_ID_PATTERN)))
                     require(it.available() == 0)
                     return LookupQuery(scope, search, limit, name, id)
                 }

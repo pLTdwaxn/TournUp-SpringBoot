@@ -32,6 +32,7 @@ class TournamentCreateServiceTests {
     fun closeValidatorFactory() = validatorFactory.close()
 
     private val request = TournamentCreateRequest(
+        nanoId = "BCDF",
         name = "Winter Open",
         slug = "winter-open",
         description = "A team competition",
@@ -42,7 +43,8 @@ class TournamentCreateServiceTests {
 
     @Test
     fun `invalid direct service calls fail before persistence`() {
-        for (invalid in listOf(request.copy(name = " "), request.copy(slug = "Invalid_Slug"))) {
+        for (invalid in listOf(request.copy(name = " "), request.copy(slug = "Invalid_Slug"),
+            request.copy(nanoId = "abcd"), request.copy(nanoId = "B0DF"), request.copy(nanoId = "BADF"))) {
             assertFailsWith<jakarta.validation.ConstraintViolationException> { service.create(invalid) }
         }
         org.mockito.Mockito.verifyNoInteractions(tournaments)
@@ -60,6 +62,7 @@ class TournamentCreateServiceTests {
 
         assertEquals(request.name, saved.name)
         assertEquals(request.slug, saved.slug)
+        assertEquals(request.nanoId, saved.nanoId)
         assertEquals(request.description, saved.description)
         assertEquals(request.participantType, saved.participantType)
         assertEquals(request.participationMode, saved.participationMode)
@@ -67,14 +70,13 @@ class TournamentCreateServiceTests {
 
         assertEquals(
             TournamentData(
-                id = saved.id,
+                internalId = saved.id,
                 slug = request.slug,
                 name = request.name,
                 description = request.description,
                 participantType = request.participantType,
                 participationMode = request.participationMode,
-                handicapMode = request.handicapMode,
-            ),
+                handicapMode = request.handicapMode, nanoId = saved.nanoId),
             response.item,
         )
 
@@ -121,6 +123,19 @@ class TournamentCreateServiceTests {
         }
 
         assertSame(failure, thrown)
+    }
+
+    @Test
+    fun `NanoID collisions fail without retrying or replacing the submitted ID`() {
+        val failure = constraintFailure("tournaments_nano_id_key")
+        whenever(tournaments.saveAndFlush(anyTournament())).thenThrow(failure)
+
+        val conflict = assertFailsWith<com.abeesmall.tournup.service.NanoIdConflictException> {
+            service.create(request.copy(nanoId = "BCDF"))
+        }
+
+        assertSame(failure, conflict.cause)
+        verify(tournaments).saveAndFlush(anyTournament())
     }
 
     // Java Mockito matchers return null; Kotlin needs a non-null placeholder.

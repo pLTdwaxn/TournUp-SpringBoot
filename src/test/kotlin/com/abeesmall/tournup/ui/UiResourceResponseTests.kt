@@ -27,7 +27,7 @@ class UiResourceResponseTests {
             UiManifestContext(
                 UiApplication.TOURNAMENT_MANAGER, UiOperation.READ,
                 allowedWrites = setOf(UiOperation.UPDATE), title = "2026 S1",
-                recordId = "00000000-0000-4000-8000-000000000002",
+                recordId = "2026-s1-GHJK",
             ),
         )
         val json = mapper.readTree(mapper.writeValueAsString(manifest))

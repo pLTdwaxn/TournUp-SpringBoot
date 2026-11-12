@@ -55,6 +55,15 @@ class SeasonRepositoryTests {
     lateinit var transactionManager: PlatformTransactionManager
 
     @Test
+    fun `database rejects duplicate NanoIDs regardless of slug`() {
+        val parent = newTournament()
+        seasons.saveAndFlush(Season(tournament = parent, name = "First", slug = "first", fromYear = 2026, nanoId = "BCDF"))
+        assertFailsWith<DataIntegrityViolationException> {
+            seasons.saveAndFlush(Season(tournament = parent, name = "Second", slug = "second", fromYear = 2027, nanoId = "BCDF"))
+        }
+    }
+
+    @Test
     fun `lookup search stays within its selected tournament`() {
         val parent = newTournament()
         val other = newTournament()
@@ -63,7 +72,7 @@ class SeasonRepositoryTests {
         seasons.saveAndFlush(newSeason(other, name = "$prefix B", slug = "lookup-b"))
         val query = LookupQuery.parse("season:${parent.id}", prefix, 20, null)
         val result = query.response(seasons.lookup(query.pattern, query.afterName, query.afterId, parent.id, query.pageable))
-        assertEquals(listOf(expected.id), result.items.map { it.id })
+        assertEquals(listOf(expected.locator), result.items.map { it.id })
         assertNull(result.nextCursor)
     }
 
@@ -81,7 +90,7 @@ class SeasonRepositoryTests {
         entityManager.clear()
 
         val found = assertNotNull(
-            seasons.findByTournamentIdAndSlug(tournament.id, "2026-s1"),
+            seasons.findByNanoId(saved.nanoId),
         )
 
         assertEquals(saved.id, found.id)
@@ -90,7 +99,7 @@ class SeasonRepositoryTests {
         assertEquals("2026-s1", found.slug)
         assertEquals(2026, found.fromYear)
         assertNull(
-            seasons.findByTournamentIdAndSlug(UUID.randomUUID(), "2026-s1"),
+            seasons.findByNanoId("0000"),
         )
     }
 
@@ -105,11 +114,11 @@ class SeasonRepositoryTests {
         assertTrue(first.id != second.id)
         assertEquals(
             first.id,
-            seasons.findByTournamentIdAndSlug(firstTournament.id, "2026-s1")?.id,
+            seasons.findByNanoId(first.nanoId)?.id,
         )
         assertEquals(
             second.id,
-            seasons.findByTournamentIdAndSlug(secondTournament.id, "2026-s1")?.id,
+            seasons.findByNanoId(second.nanoId)?.id,
         )
     }
 
@@ -131,7 +140,7 @@ class SeasonRepositoryTests {
         )
         entityManager.clear()
 
-        val reloaded = seasons.findById(saved.id).orElseThrow()
+        val reloaded = seasons.findByNanoId(saved.nanoId)!!
         assertEquals(original.id, reloaded.tournament.id)
         assertEquals("Updated season", reloaded.name)
         assertEquals("updated-season", reloaded.slug)
@@ -155,11 +164,8 @@ class SeasonRepositoryTests {
                 .map { it.id },
         )
         assertTrue(seasons.existsByTournamentIdAndName(tournament.id, earlier.name))
-        assertTrue(seasons.existsByTournamentIdAndSlug(tournament.id, earlier.slug))
         assertFalse(seasons.existsByTournamentIdAndName(tournament.id, "Other season"))
-        assertFalse(seasons.existsByTournamentIdAndSlug(tournament.id, "other-season"))
         assertFalse(seasons.existsByTournamentIdAndName(other.id, earlier.name))
-        assertFalse(seasons.existsByTournamentIdAndSlug(other.id, earlier.slug))
     }
 
     @Test
@@ -202,11 +208,8 @@ class SeasonRepositoryTests {
         )
 
         assertFalse(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, current.name, current.id))
-        assertFalse(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, current.slug, current.id))
         assertTrue(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, sibling.name, current.id))
-        assertTrue(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, sibling.slug, current.id))
         assertFalse(seasons.existsByTournamentIdAndNameAndIdNot(tournament.id, unrelated.name, current.id))
-        assertFalse(seasons.existsByTournamentIdAndSlugAndIdNot(tournament.id, unrelated.slug, current.id))
     }
 
     @Test
@@ -222,15 +225,22 @@ class SeasonRepositoryTests {
     }
 
     @Test
-    fun `duplicate slug is rejected within the same tournament`() {
+    fun `duplicate slugs in one tournament have distinct resolvable public identities`() {
         val tournament = newTournament()
-        seasons.saveAndFlush(newSeason(tournament))
+        val first = seasons.saveAndFlush(newSeason(tournament))
+        val second = seasons.saveAndFlush(newSeason(tournament, name = "Another season", fromYear = 2027))
+        entityManager.clear()
 
-        assertFailsWith<DataIntegrityViolationException> {
-            seasons.saveAndFlush(
-                newSeason(tournament, name = "Another season", fromYear = 2027),
-            )
-        }
+        assertEquals(first.slug, second.slug)
+        assertTrue(first.locator != second.locator)
+        assertEquals(first.id, seasons.findByNanoId(first.nanoId)?.id)
+        assertEquals(second.id, seasons.findByNanoId(second.nanoId)?.id)
+
+        val updated = assertNotNull(seasons.findByNanoId(second.nanoId))
+        updated.slug = "temporary"
+        seasons.saveAndFlush(updated)
+        updated.slug = first.slug
+        seasons.saveAndFlush(updated)
     }
 
     @Test
@@ -292,7 +302,7 @@ class SeasonRepositoryTests {
         )
 
         transaction.executeWithoutResult {
-            val season = seasons.findById(saved.id).orElseThrow()
+            val season = seasons.findByNanoId(saved.nanoId)!!
             season.name = "2027 S1"
             season.slug = "2027-s1"
             season.fromYear = 2027

@@ -50,7 +50,7 @@ class SeasonListControllerTests(
     private lateinit var auditReader: LatestAuditReader
 
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")
-    private val url = "/api/tournaments/${tournament.id}/seasons/"
+    private val url = "/api/tournaments/${tournament.locator}/seasons/"
     private val sort = Sort.by(
         Sort.Order.desc("fromYear"), Sort.Order.asc("name"), Sort.Order.asc("id"),
     )
@@ -61,7 +61,7 @@ class SeasonListControllerTests(
         mockMvc.post(url) {
             with(csrf())
             contentType = MediaType.APPLICATION_JSON
-            content = """{"tournamentId":"${tournament.id}","name":"2026 S1","slug":"2026-s1","fromYear":2026}"""
+            content = """{"tournamentId":"${tournament.locator}","name":"2026 S1","slug":"2026-s1","fromYear":2026}"""
         }.andExpect { status { isMethodNotAllowed() } }
         verifyNoInteractions(tournaments, seasons, auditReader)
     }
@@ -85,14 +85,14 @@ class SeasonListControllerTests(
     @Test
     @WithMockUser(roles = ["SUPER_ADMIN"])
     fun `unknown tournament returns not found without querying seasons`() {
-        whenever(tournaments.existsById(tournament.id)).thenReturn(false)
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(null)
 
         mockMvc.get(url).andExpect {
             status { isNotFound() }
             content { contentType("application/problem+json") }
             jsonPath("$.detail", equalTo("Tournament not found"))
         }
-        verify(tournaments).existsById(tournament.id)
+        verify(tournaments).findByNanoId(tournament.nanoId)
         verifyNoInteractions(seasons, auditReader)
     }
 
@@ -118,8 +118,8 @@ class SeasonListControllerTests(
             jsonPath("$.manifest.fields.name.editable", equalTo(false))
             jsonPath("$.manifest.fields.slug.label", equalTo("Slug"))
             jsonPath("$.items.length()", equalTo(1))
-            jsonPath("$.items[0].id", equalTo(season.id.toString()))
-            jsonPath("$.items[0].tournamentId", equalTo(tournament.id.toString()))
+            jsonPath("$.items[0].id", equalTo(season.locator))
+            jsonPath("$.items[0].tournamentId", equalTo(tournament.locator))
             jsonPath("$.items[0].name", equalTo("2026 S2"))
             jsonPath("$.items[0].slug", equalTo("2026-s2"))
             jsonPath("$.items[0].fromYear", equalTo(2026))
@@ -128,7 +128,7 @@ class SeasonListControllerTests(
             jsonPath("$.pagination.totalElements", equalTo(3))
             jsonPath("$.pagination.totalPages", equalTo(3))
         }
-        verify(tournaments).existsById(tournament.id)
+        verify(tournaments).findByNanoId(tournament.nanoId)
         verify(seasons).findAllByTournamentId(tournament.id, pageable)
         verifyNoMoreInteractions(tournaments, seasons)
     }
@@ -180,7 +180,7 @@ class SeasonListControllerTests(
             if (canCreate) {
                 jsonPath("$.manifest.commands[0].id", equalTo("create"))
                 jsonPath("$.manifest.commands[0].method", equalTo("GET"))
-                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/?tournamentId=${tournament.id}"))
+                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/?tournamentId=${tournament.locator}"))
             }
         }
     }
@@ -222,7 +222,7 @@ class SeasonListControllerTests(
             with(user("viewer").roles(role))
         }.andExpect {
             status { isOk() }
-            jsonPath("$.items[0].id", equalTo(season.id.toString()))
+            jsonPath("$.items[0].id", equalTo(season.locator))
             jsonPath("$.items[0].lastAudit") { doesNotHaveJsonPath() }
         }
         verifyNoInteractions(auditReader)
@@ -252,10 +252,10 @@ class SeasonListControllerTests(
                 jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/"))
             }
             jsonPath("$.items.length()", equalTo(2))
-            jsonPath("$.items[0].id", equalTo(first.id.toString()))
-            jsonPath("$.items[0].tournamentId", equalTo(tournament.id.toString()))
-            jsonPath("$.items[1].id", equalTo(second.id.toString()))
-            jsonPath("$.items[1].tournamentId", equalTo(otherTournament.id.toString()))
+            jsonPath("$.items[0].id", equalTo(first.locator))
+            jsonPath("$.items[0].tournamentId", equalTo(tournament.locator))
+            jsonPath("$.items[1].id", equalTo(second.locator))
+            jsonPath("$.items[1].tournamentId", equalTo(otherTournament.locator))
             jsonPath("$.pagination.totalElements", equalTo(2))
             jsonPath("$.pagination.totalPages", equalTo(1))
         }
@@ -281,7 +281,7 @@ class SeasonListControllerTests(
         mockMvc.get("/api/seasons/?page=1&size=1").andExpect {
             status { isOk() }
             jsonPath("$.items.length()", equalTo(1))
-            jsonPath("$.items[0].id", equalTo(record.id.toString()))
+            jsonPath("$.items[0].id", equalTo(record.locator))
             jsonPath("$.pagination.page", equalTo(1))
             jsonPath("$.pagination.size", equalTo(1))
             jsonPath("$.pagination.totalElements", equalTo(3))
@@ -320,7 +320,7 @@ class SeasonListControllerTests(
         total: Long = items.size.toLong(),
     ): PageRequest {
         val pageable = PageRequest.of(page, size, sort)
-        whenever(tournaments.existsById(tournament.id)).thenReturn(true)
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
         whenever(seasons.findAllByTournamentId(tournament.id, pageable))
             .thenReturn(PageImpl(items, pageable, total))
         return pageable

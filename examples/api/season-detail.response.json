@@ -57,13 +57,14 @@
         "id": "edit",
         "label": "Edit season",
         "method": "GET",
-        "href": "/api/seasons/00000000-0000-4000-8000-000000000002/edit/"
+        "href": "/api/seasons/2026-s1-GHJK/edit/"
       }
     ]
   },
   "item": {
-    "id": "00000000-0000-4000-8000-000000000002",
-    "tournamentId": "00000000-0000-4000-8000-000000000001",
+    "id": "2026-s1-GHJK",
+    "nanoId": "GHJK",
+    "tournamentId": "winter-open-BCDF",
     "name": "2026 S1",
     "slug": "2026-s1",
     "fromYear": 2026,
@@ -76,7 +77,7 @@
   "included": {
     "tournament": [
       {
-        "id": "00000000-0000-4000-8000-000000000001",
+        "id": "winter-open-BCDF",
         "name": "Winter Open"
       }
     ]

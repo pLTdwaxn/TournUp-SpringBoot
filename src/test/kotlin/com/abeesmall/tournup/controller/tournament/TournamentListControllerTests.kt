@@ -139,7 +139,7 @@ class TournamentListControllerTests(
                 )
 
                 jsonPath("$.items.length()", equalTo(1))
-                jsonPath("$.items[0].id", equalTo(tournament.id.toString()))
+                jsonPath("$.items[0].id", equalTo(tournament.locator))
                 jsonPath("$.items[0].slug", equalTo("winter-open"))
                 jsonPath("$.items[0].name", equalTo("Winter Open"))
                 jsonPath("$.items[0].description", equalTo("A team competition"))
@@ -291,7 +291,7 @@ class TournamentListControllerTests(
             header(UI_APPLICATION_HEADER, "tournament-manager")
         }.andExpect {
             status { isOk() }
-            jsonPath("$.items[0].id", equalTo(tournament.id.toString()))
+            jsonPath("$.items[0].id", equalTo(tournament.locator))
             jsonPath("$.items[0].lastAudit") {
                 doesNotHaveJsonPath()
             }
@@ -404,7 +404,7 @@ class TournamentListControllerTests(
             status { isOk() }
             jsonPath("$.manifest.application", equalTo("tournament-manager"))
             jsonPath("$.manifest.commands.length()", equalTo(0))
-            jsonPath("$.items[0].id", equalTo(tournament.id.toString()))
+            jsonPath("$.items[0].id", equalTo(tournament.locator))
             jsonPath("$.items[0].lastAudit") { doesNotHaveJsonPath() }
         }
         verifyNoInteractions(auditReader)

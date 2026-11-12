@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.util.UUID
+import com.abeesmall.tournup.model.ResourceIdentifiers
 import org.hibernate.envers.Audited
 
 enum class HandicapMode {
@@ -30,7 +31,7 @@ enum class ParticipantType {
 @Audited
 class Tournament(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID = ResourceIdentifiers.uuidV7(),
 
     @Column(nullable = false, unique = true, length = 255)
     var slug: String,
@@ -52,4 +53,9 @@ class Tournament(
     @Enumerated(EnumType.STRING)
     @Column(name = "participant_type", nullable = false, length = 20)
     var participantType: ParticipantType = ParticipantType.PLAYER,
-)
+    @Column(name = "nano_id", nullable = false, unique = true, updatable = false, length = 4)
+    val nanoId: String = ResourceIdentifiers.nanoId(),
+
+) {
+    val locator: String get() = ResourceIdentifiers.locator(slug, nanoId)
+}

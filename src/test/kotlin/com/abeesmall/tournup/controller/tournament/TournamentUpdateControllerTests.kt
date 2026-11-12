@@ -49,7 +49,8 @@ class TournamentUpdateControllerTests(
     @MockitoBean
     private lateinit var service: TournamentService
 
-    private val id = UUID.randomUUID()
+    private val internalId = UUID.randomUUID()
+    private val id = "winter-open-BCDF"
     private val path = "/api/tournaments/$id/"
     private val request = TournamentUpdateRequest(
         name = "Winter Open",
@@ -66,8 +67,8 @@ class TournamentUpdateControllerTests(
     )
     fun `writers can open the form and update the tournament`(role: String) {
         val actorId = UUID.randomUUID()
-        whenever(auditReader.findLatest(Tournament::class.java, listOf(id))).thenReturn(
-            mapOf(id to LastAuditData(43, Instant.parse("2026-11-12T00:00:00Z"), actorId)),
+        whenever(auditReader.findLatest(Tournament::class.java, listOf(internalId))).thenReturn(
+            mapOf(internalId to LastAuditData(43, Instant.parse("2026-11-12T00:00:00Z"), actorId)),
         )
         whenever(service.editForm(id)).thenReturn(
             ResourceRecord(
@@ -77,14 +78,13 @@ class TournamentUpdateControllerTests(
         whenever(service.update(id, request)).thenReturn(
             ResourceRecord(
                 item = TournamentData(
-                    id = id,
+                    internalId = internalId,
                     name = request.name,
                     slug = request.slug,
                     description = request.description,
                     participantType = request.participantType,
                     participationMode = request.participationMode,
-                    handicapMode = request.handicapMode,
-                ),
+                    handicapMode = request.handicapMode, nanoId = "BCDF"),
             ),
         )
 
@@ -126,7 +126,7 @@ class TournamentUpdateControllerTests(
         val ordered = inOrder(service, auditReader)
         ordered.verify(service).editForm(id)
         ordered.verify(service).update(id, request)
-        ordered.verify(auditReader).findLatest(Tournament::class.java, listOf(id))
+        ordered.verify(auditReader).findLatest(Tournament::class.java, listOf(internalId))
         ordered.verifyNoMoreInteractions()
     }
 
@@ -205,7 +205,7 @@ class TournamentUpdateControllerTests(
 
     @Test
     fun `malformed IDs are rejected before calling the service`() {
-        val invalidPath = "/api/tournaments/not-a-uuid/"
+        val invalidPath = "/api/tournaments/invalid/"
 
         mockMvc.get("${invalidPath}edit/") {
             with(user("writer").roles("SUPER_ADMIN"))

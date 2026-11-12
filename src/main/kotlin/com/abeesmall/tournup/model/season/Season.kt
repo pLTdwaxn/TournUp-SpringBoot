@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import java.util.UUID
+import com.abeesmall.tournup.model.ResourceIdentifiers
 import org.hibernate.envers.Audited
 
 @Entity
@@ -22,16 +23,12 @@ import org.hibernate.envers.Audited
             name = "seasons_tournament_name_unique",
             columnNames = ["tournament_id", "name"],
         ),
-        UniqueConstraint(
-            name = "seasons_tournament_slug_unique",
-            columnNames = ["tournament_id", "slug"],
-        ),
     ],
 )
 @Audited
 class Season(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID = ResourceIdentifiers.uuidV7(),
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
@@ -50,4 +47,9 @@ class Season(
 
     @Column(name = "from_year", nullable = false)
     var fromYear: Int,
-)
+    @Column(name = "nano_id", nullable = false, unique = true, updatable = false, length = 4)
+    val nanoId: String = ResourceIdentifiers.nanoId(),
+
+) {
+    val locator: String get() = ResourceIdentifiers.locator(slug, nanoId)
+}

@@ -5,8 +5,9 @@ import com.abeesmall.tournup.model.season.Season
 
 
 internal fun Season.toData(): SeasonData = SeasonData(
-    id = id,
-    tournamentId = tournament.id,
+    internalId = id,
+    nanoId = nanoId,
+    tournamentId = com.abeesmall.tournup.model.ResourceIdentifiers.locator(tournament.slug, tournament.nanoId),
     name = name,
     slug = slug,
     fromYear = fromYear,

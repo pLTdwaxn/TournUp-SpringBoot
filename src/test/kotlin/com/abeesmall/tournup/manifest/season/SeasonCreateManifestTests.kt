@@ -7,7 +7,6 @@ import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiManifestContext
 import com.abeesmall.tournup.ui.UiOperation
-import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -85,7 +84,7 @@ class SeasonCreateManifestTests {
 
     @Test
     fun `prefilled values and included reference records leave the field definition unchanged`() {
-        val id = UUID.randomUUID()
+        val id = "parent-BCDF"
         val empty = UiRecordResponse(ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(

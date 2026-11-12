@@ -43,6 +43,7 @@ dependencyLocking {
 }
 
 dependencies {
+    implementation("com.aventrix.jnanoid:jnanoid:2.0.0")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.hibernate.orm:hibernate-envers")
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
