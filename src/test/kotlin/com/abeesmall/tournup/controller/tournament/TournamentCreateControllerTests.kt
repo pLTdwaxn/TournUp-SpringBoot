@@ -1,28 +1,24 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
-import com.abeesmall.tournup.model.tournament.Tournament
-import java.time.Instant
-import org.mockito.Mockito.inOrder
-import com.abeesmall.tournup.repository.audit.LatestAuditReader
-import com.abeesmall.tournup.dto.ui.UiRecordResponse
-
-import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
-import com.abeesmall.tournup.ui.UiApplication
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.UiOperation
-
-import com.abeesmall.tournup.validation.RESOURCE_NAME_MAX_LENGTH
-import com.abeesmall.tournup.validation.RESOURCE_SLUG_PATTERN
 import com.abeesmall.tournup.dto.tournament.TournamentCreateRequest
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
+import com.abeesmall.tournup.model.tournament.Tournament
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
+import com.abeesmall.tournup.service.ResourceRecord
 import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.service.tournament.TournamentSlugConflictException
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
+import com.abeesmall.tournup.validation.RESOURCE_NAME_MAX_LENGTH
+import com.abeesmall.tournup.validation.RESOURCE_SLUG_PATTERN
+import java.time.Instant
 import java.util.UUID
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.equalTo
@@ -31,6 +27,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.`when` as whenever
+import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -46,8 +43,8 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(TournamentController::class)
-@Import(SecurityConfiguration::class)
+@WebMvcTest(TournamentController::class, ResourceCrudController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, TournamentResourceHandler::class)
 class TournamentCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
@@ -149,15 +146,7 @@ class TournamentCreateControllerTests(
     )
     fun `writers can create a tournament`(role: String) {
         val id = UUID.randomUUID()
-        val response = UiRecordResponse(
-            manifest = UiManifestResolver.resolve(
-                tournamentResourceDefinition(),
-                UiManifestContext(
-                    UiApplication.TOURNAMENT_MANAGER,
-                    UiOperation.READ,
-                    title = validRequest.name,
-                ),
-            ),
+        val response = ResourceRecord(
             item = TournamentData(
                 id = id,
                 slug = validRequest.slug,

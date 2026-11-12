@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
@@ -7,8 +8,11 @@ import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.tournament.TournamentService
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import com.abeesmall.tournup.ui.FieldPresentation
 import com.abeesmall.tournup.ui.LayoutDefinition
 import com.abeesmall.tournup.ui.PublishedUiLayout
@@ -17,7 +21,6 @@ import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
 import com.abeesmall.tournup.ui.UiLayout
 import com.abeesmall.tournup.ui.UiLayoutType
 import com.abeesmall.tournup.ui.UiWidget
-
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertTrue
@@ -42,8 +45,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
-@WebMvcTest(TournamentController::class)
-@Import(SecurityConfiguration::class, TournamentService::class)
+@WebMvcTest(TournamentController::class, ResourceCrudController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, TournamentResourceHandler::class, TournamentService::class)
 class TournamentListControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {

@@ -1,10 +1,14 @@
 package com.abeesmall.tournup.ui
 
-import com.abeesmall.tournup.manifest.tournament.tournamentFieldCatalogue
+import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.support.UiTestSupport
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.junit.jupiter.api.extension.RegisterExtension
 
 class LayoutValidationTests {
+    @RegisterExtension @JvmField val ui = UiTestSupport()
+
     @Test
     fun `reference form fields require a record select widget`() {
         val definition = LayoutDefinition(
@@ -55,7 +59,7 @@ class LayoutValidationTests {
             setOf("unknownField", "madeUpField"),
             unknownLayoutFieldIds(
                 definition,
-                tournamentFieldCatalogue().keys,
+                ui.manifests.fields(tournamentResourceDefinition()).keys,
             ),
         )
     }
@@ -85,7 +89,7 @@ class LayoutValidationTests {
             setOf("name", "participantType"),
             incompatibleWidgetFieldIds(
                 definition,
-                tournamentFieldCatalogue()
+                ui.manifests.fields(tournamentResourceDefinition())
                     .mapValues { it.value.dataType }
             ),
         )
@@ -110,7 +114,7 @@ class LayoutValidationTests {
             ),
         )
 
-        val requiredWithoutDefaults = tournamentFieldCatalogue()
+        val requiredWithoutDefaults = ui.manifests.fields(tournamentResourceDefinition())
             .filterValues { it.required && it.defaultValue == null }
             .keys
 
@@ -185,7 +189,7 @@ class LayoutValidationTests {
                 "orphan" to FieldPresentation("Orphan", UiWidget.TEXT),
             ),
         )
-        val catalogue = tournamentFieldCatalogue()
+        val catalogue = ui.manifests.fields(tournamentResourceDefinition())
 
         val report = validateLayoutDefinition(
             definition,
@@ -224,7 +228,7 @@ class LayoutValidationTests {
                 "orphan" to FieldPresentation("Orphan", UiWidget.DISPLAY),
             ),
         )
-        val catalogue = tournamentFieldCatalogue()
+        val catalogue = ui.manifests.fields(tournamentResourceDefinition())
 
         val report = validateLayoutDefinition(
             definition,

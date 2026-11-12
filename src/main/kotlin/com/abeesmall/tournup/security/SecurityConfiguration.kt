@@ -2,7 +2,7 @@ package com.abeesmall.tournup.security
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.HttpMethod
+import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.SecurityFilterChain
@@ -14,6 +14,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository
 
 @Configuration(proxyBeanMethods = false)
+@Import(ResourceAuthorization::class)
 class SecurityConfiguration {
 
     @Bean
@@ -35,41 +36,6 @@ class SecurityConfiguration {
                     "/api/auth/csrf/",
                     "/api/auth/login/",
                 ).permitAll()
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/seasons/create/",
-                    "/api/seasons/naming-context/",
-                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/seasons/{seasonId}/edit/",
-                    "/api/tournaments/{tournamentId}/seasons/{seasonId}/edit/",
-                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.PUT,
-                    "/api/seasons/{seasonId}/",
-                    "/api/tournaments/{tournamentId}/seasons/{seasonId}/",
-                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.POST,
-                    "/api/seasons/",
-                ).hasAnyRole(*seasonWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/tournaments/create/",
-                ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.POST,
-                    "/api/tournaments/",
-                ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/tournaments/{id}/edit/",
-                ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
-                .requestMatchers(
-                    HttpMethod.PUT,
-                    "/api/tournaments/{id}/",
-                ).hasAnyRole(*tournamentWriterRoles.toTypedArray())
                 .anyRequest().authenticated()
         }
 

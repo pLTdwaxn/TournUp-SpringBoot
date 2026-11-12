@@ -1,6 +1,5 @@
 package com.abeesmall.tournup.service.tournament
 
-import com.abeesmall.tournup.ui.PublishedUiLayoutReader
 import com.abeesmall.tournup.dto.tournament.TournamentCreateRequest
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.model.tournament.HandicapMode
@@ -8,12 +7,14 @@ import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import jakarta.validation.Validation
 import java.sql.SQLException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import org.hibernate.exception.ConstraintViolationException
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.`when` as whenever
@@ -24,7 +25,11 @@ import org.springframework.dao.DataIntegrityViolationException
 
 class TournamentCreateServiceTests {
     private val tournaments = mock(TournamentRepository::class.java)
-    private val service = TournamentService(tournaments, mock(PublishedUiLayoutReader::class.java))
+    private val validatorFactory = Validation.buildDefaultValidatorFactory()
+    private val service = TournamentService(tournaments, validatorFactory.validator)
+
+    @AfterEach
+    fun closeValidatorFactory() = validatorFactory.close()
 
     private val request = TournamentCreateRequest(
         name = "Winter Open",
@@ -34,6 +39,14 @@ class TournamentCreateServiceTests {
         participationMode = ParticipationMode.REGISTRATION,
         handicapMode = HandicapMode.CARRY_FORWARD,
     )
+
+    @Test
+    fun `invalid direct service calls fail before persistence`() {
+        for (invalid in listOf(request.copy(name = " "), request.copy(slug = "Invalid_Slug"))) {
+            assertFailsWith<jakarta.validation.ConstraintViolationException> { service.create(invalid) }
+        }
+        org.mockito.Mockito.verifyNoInteractions(tournaments)
+    }
 
     @Test
     fun `saves the requested data and returns its detail response`() {
@@ -64,7 +77,6 @@ class TournamentCreateServiceTests {
             ),
             response.item,
         )
-        assertEquals(request.name, response.manifest.title)
 
         verify(tournaments).findBySlug(request.slug)
         verify(tournaments).saveAndFlush(saved)

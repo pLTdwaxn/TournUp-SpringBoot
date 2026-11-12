@@ -1,11 +1,9 @@
 package com.abeesmall.tournup.manifest.season
 
-import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceOperation
 import com.abeesmall.tournup.dto.ui.UiResourceRelationship
-import com.abeesmall.tournup.manifest.season.seasonFieldCatalogue
-import com.abeesmall.tournup.security.canManageSeasons
+import com.abeesmall.tournup.resource.season.seasonResource
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiBehaviour
 import com.abeesmall.tournup.ui.UiBehaviourType
@@ -24,12 +22,12 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
     val form = UiLayout(UiLayoutType.FORM, listOf(UiSection("details", "Details", all)))
     val detail = UiLayout(UiLayoutType.DETAIL, listOf(UiSection("details", "Details", all)))
     return UiResourceRegistration(
-        resourceClass = SeasonData::class.java,
+        definition = seasonResource,
         audited = true,
         applications = setOf(UiApplication.TOURNAMENT_MANAGER),
         label = "Seasons",
         displayField = "name",
-        fields = seasonFieldCatalogue(),
+        presentation = seasonFieldPresentation(),
         identifier = UiResourceIdentifier("id", "uuid", slugField = "slug", slugContext = listOf("tournamentId")),
         relationships = listOf(UiResourceRelationship("tournamentId", "tournament", "Tournament", true)),
         operations = listOf(
@@ -59,8 +57,6 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
             ),
             UiResourceOperation("lookup", UiOperation.LIST, UiCommandMethod.GET, "/api/seasons/lookup/"),
         ),
-        canRead = { it.isAuthenticated },
-        canWrite = ::canManageSeasons,
         views = mapOf(
             UiOperation.CREATE to UiViewDefinition(
                 "season-create", "Create season", form, all,

@@ -1,12 +1,21 @@
 package com.abeesmall.tournup.controller.ui
 
 import com.abeesmall.tournup.auth.AuthenticatedUser
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.season.SeasonResourceHandler
+import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
+import com.abeesmall.tournup.security.SecurityConfiguration
+import com.abeesmall.tournup.service.season.SeasonService
+import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.service.ui.UiResourceCatalogueService
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
+import com.abeesmall.tournup.support.registryFor
 import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
 import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiManifestResolver
 import com.abeesmall.tournup.ui.resource.UiResourceConfiguration
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
-import com.abeesmall.tournup.security.SecurityConfiguration
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -24,19 +33,32 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(UiResourceCatalogueController::class)
 @Import(
     SecurityConfiguration::class,
+    ResourceWebTestConfiguration::class,
+    ResourceRegistry::class,
+    SeasonResourceHandler::class,
+    TournamentResourceHandler::class,
     UiResourceCatalogueService::class,
     UiResourceRegistry::class,
     UiResourceConfiguration::class,
 )
 class UiResourceCatalogueControllerTests(
     @Autowired private val mockMvc: MockMvc,
+    @Autowired private val manifests: UiManifestResolver,
 ) {
+    @MockitoBean
+    private lateinit var tournaments: TournamentService
+    @MockitoBean
+    private lateinit var seasons: SeasonService
+    @MockitoBean
+    private lateinit var audits: LatestAuditReader
+
     private val path = "/api/ui/resources/"
     private val tenantId = UUID.randomUUID()
     private val userId = UUID.randomUUID()
@@ -45,7 +67,8 @@ class UiResourceCatalogueControllerTests(
     fun `audit capability requires explicit registration and user permission`() {
         for (audited in listOf(false, true)) {
             val registration = UiResourceConfiguration().tournamentUiResource().copy(audited = audited)
-            val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration)))
+            val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration),
+                registryFor(listOf(registration.definition))), manifests)
             for (role in listOf("PLAYER", "SUPER_ADMIN")) {
                 val authentication = viewer(role)
                 val catalogue = service.catalogue(

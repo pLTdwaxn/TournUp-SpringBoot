@@ -4,6 +4,7 @@ import com.abeesmall.tournup.TestcontainersConfiguration
 import com.abeesmall.tournup.ui.FieldPresentation
 import com.abeesmall.tournup.ui.LayoutDefinition
 import com.abeesmall.tournup.ui.PublishedUiLayoutReader
+import com.abeesmall.tournup.ui.UiConstraintProjector
 import com.abeesmall.tournup.ui.UiLayout
 import com.abeesmall.tournup.ui.UiLayoutRecord
 import com.abeesmall.tournup.ui.UiLayoutRepository
@@ -11,9 +12,11 @@ import com.abeesmall.tournup.ui.UiLayoutRevisionId
 import com.abeesmall.tournup.ui.UiLayoutRevisionRecord
 import com.abeesmall.tournup.ui.UiLayoutRevisionRepository
 import com.abeesmall.tournup.ui.UiLayoutType
+import com.abeesmall.tournup.ui.UiManifestResolver
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiWidget
+import com.abeesmall.tournup.validation.WriteContractMetadata
 import jakarta.persistence.EntityManager
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -24,11 +27,16 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(
     TestcontainersConfiguration::class,
+    UiManifestResolver::class,
+    UiConstraintProjector::class,
+    WriteContractMetadata::class,
+    LocalValidatorFactoryBean::class,
     TournamentCreateLayoutPublisher::class,
     PublishedUiLayoutReader::class,
 )

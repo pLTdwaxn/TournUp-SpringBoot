@@ -5,20 +5,24 @@ import com.abeesmall.tournup.dto.ui.UiPagination
 import com.abeesmall.tournup.dto.ui.UiRecordResponse
 import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
 import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.support.UiTestSupport
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import tools.jackson.databind.json.JsonMapper
 
 class UiResourceResponseTests {
+    @RegisterExtension @JvmField val ui = UiTestSupport()
+
     private val mapper = JsonMapper.builder().build()
 
     @Test
     fun `sample detail manifest matches the concise wire contract`() {
-        val manifest = UiManifestResolver.resolve(
+        val manifest = ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(
                 UiApplication.TOURNAMENT_MANAGER, UiOperation.READ,
@@ -42,7 +46,7 @@ class UiResourceResponseTests {
 
     @Test
     fun `form serialization preserves explicit optional and readonly flags`() {
-        val manifest = UiManifestResolver.resolve(
+        val manifest = ui.manifests.resolve(
             tournamentResourceDefinition(),
             UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.CREATE),
         )
@@ -56,7 +60,7 @@ class UiResourceResponseTests {
 
     @Test
     fun `record and collection envelopes retain empty data and inclusion containers`() {
-        val manifest = UiManifestResolver.resolve(
+        val manifest = ui.manifests.resolve(
             seasonResourceDefinition(), UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.LIST),
         )
         val record = mapper.readTree(mapper.writeValueAsString(UiRecordResponse(manifest, mapOf("name" to ""))))

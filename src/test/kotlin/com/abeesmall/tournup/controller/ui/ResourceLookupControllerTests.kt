@@ -5,9 +5,13 @@ import com.abeesmall.tournup.controller.tournament.TournamentController
 import com.abeesmall.tournup.dto.ui.LookupItem
 import com.abeesmall.tournup.dto.ui.LookupResponse
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.season.SeasonResourceHandler
+import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.service.tournament.TournamentService
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import java.util.UUID
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
@@ -22,7 +26,10 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(SeasonController::class, TournamentController::class)
-@Import(SecurityConfiguration::class)
+@Import(SecurityConfiguration::class, ResourceWebTestConfiguration::class,
+    ResourceRegistry::class,
+    SeasonResourceHandler::class,
+    TournamentResourceHandler::class)
 class ResourceLookupControllerTests(@Autowired private val mvc: MockMvc) {
     @MockitoBean private lateinit var seasons: SeasonService
     @MockitoBean private lateinit var tournaments: TournamentService

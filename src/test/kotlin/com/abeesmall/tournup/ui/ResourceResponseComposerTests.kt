@@ -1,4 +1,4 @@
-package com.abeesmall.tournup.service
+package com.abeesmall.tournup.ui
 
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.season.SeasonData
@@ -8,27 +8,31 @@ import com.abeesmall.tournup.dto.ui.UiRecordResponse
 import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
 import com.abeesmall.tournup.ui.UiOperation
+import com.abeesmall.tournup.ui.withLatestAudit
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
+import org.mockito.Mockito.`when` as whenever
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
-import org.mockito.Mockito.`when` as whenever
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
-class ResourceResponsesTests {
+class ResourceResponseComposerTests {
+    @RegisterExtension @JvmField val ui = UiTestSupport()
+
     private val reader = mock(LatestAuditReader::class.java)
     private val item = SeasonData(UUID.randomUUID(), UUID.randomUUID(), "2026 S1", "2026-s1", 2026)
-    private val manifest = UiManifestResolver.resolve(seasonResourceDefinition(),
+    private val manifest = ui.manifests.resolve(seasonResourceDefinition(),
         UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.READ, title = item.name))
     private fun viewer(role: String) = UsernamePasswordAuthenticationToken("user", null,
         listOf(SimpleGrantedAuthority("ROLE_$role")))

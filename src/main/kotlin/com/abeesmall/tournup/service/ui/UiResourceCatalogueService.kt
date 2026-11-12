@@ -7,13 +7,14 @@ import com.abeesmall.tournup.dto.ui.UiResourceDescriptor
 import com.abeesmall.tournup.dto.ui.UiResourceField
 import com.abeesmall.tournup.security.canViewLastAudit
 import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiManifestResolver
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
 
 @Service
-class UiResourceCatalogueService(private val registry: UiResourceRegistry) {
+class UiResourceCatalogueService(private val registry: UiResourceRegistry, private val manifests: UiManifestResolver) {
     fun catalogue(
         application: UiApplication,
         authentication: Authentication,
@@ -24,16 +25,18 @@ class UiResourceCatalogueService(private val registry: UiResourceRegistry) {
         scope = UiCatalogueScope(tenantId = user.tenantId, userId = user.userId),
         resources = registry.resources.entries
             .filter { (_, definition) ->
-                application in definition.applications && definition.canRead(authentication)
+                application in definition.applications && definition.definition.canRead(authentication)
             }
             .map { (key, definition) ->
-                val canWrite = definition.canWrite(authentication)
+                val canWrite = definition.definition.canWrite(authentication)
                 UiResourceDescriptor(
                     key = key,
-                    pluralName = definition.pluralName,
+                    pluralName = definition.definition.pluralName,
                     label = definition.label,
                     displayField = definition.displayField,
-                    fields = definition.fields.mapValues { (_, field) ->
+                    // TODO: Version the catalogue to expose operation-specific constraints;
+                    // its v1 fields continue to describe the create contract.
+                    fields = manifests.fields(definition).mapValues { (_, field) ->
                         UiResourceField(
                             label = field.label,
                             dataType = field.dataType,
@@ -47,7 +50,8 @@ class UiResourceCatalogueService(private val registry: UiResourceRegistry) {
                     identifier = definition.identifier,
                     relationships = definition.relationships,
                     operations = definition.operations.filter {
-                        it.operation !in setOf(UiOperation.CREATE, UiOperation.UPDATE) || canWrite
+                        definition.supports(it) &&
+                            (it.operation !in setOf(UiOperation.CREATE, UiOperation.UPDATE) || canWrite)
                     },
                     canReadLastAudit = definition.audited &&
                         canViewLastAudit(authentication),

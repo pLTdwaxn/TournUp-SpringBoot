@@ -1,26 +1,22 @@
 package com.abeesmall.tournup.controller.tournament
 
+import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
-import com.abeesmall.tournup.model.tournament.Tournament
-import java.time.Instant
-import org.mockito.Mockito.inOrder
-import com.abeesmall.tournup.repository.audit.LatestAuditReader
-import com.abeesmall.tournup.dto.ui.UiRecordResponse
-
-import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
-import com.abeesmall.tournup.ui.UiApplication
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.UiOperation
-
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
+import com.abeesmall.tournup.model.tournament.Tournament
+import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.service.tournament.TournamentSlugConflictException
+import com.abeesmall.tournup.service.ResourceRecord
 import com.abeesmall.tournup.service.tournament.TournamentService
+import com.abeesmall.tournup.service.tournament.TournamentSlugConflictException
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
+import java.time.Instant
 import java.util.UUID
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.greaterThan
@@ -28,6 +24,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.`when` as whenever
+import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -43,8 +40,8 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(TournamentController::class)
-@Import(SecurityConfiguration::class)
+@WebMvcTest(TournamentController::class, ResourceCrudController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, TournamentResourceHandler::class)
 class TournamentUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
@@ -75,32 +72,13 @@ class TournamentUpdateControllerTests(
         whenever(auditReader.findLatest(Tournament::class.java, listOf(id))).thenReturn(
             mapOf(id to LastAuditData(43, Instant.parse("2026-11-12T00:00:00Z"), actorId)),
         )
-        whenever(service.form(id)).thenReturn(
-            UiRecordResponse(
-                manifest = UiManifestResolver.resolve(
-                    tournamentResourceDefinition(),
-                    UiManifestContext(
-                        UiApplication.TOURNAMENT_MANAGER,
-                        UiOperation.UPDATE,
-                        allowedWrites = setOf(UiOperation.UPDATE),
-                        recordId = id.toString(),
-                    ),
-                ),
+        whenever(service.editForm(id)).thenReturn(
+            ResourceRecord(
                 item = request,
             ),
         )
         whenever(service.update(id, request)).thenReturn(
-            UiRecordResponse(
-                manifest = UiManifestResolver.resolve(
-                    tournamentResourceDefinition(),
-                    UiManifestContext(
-                        UiApplication.TOURNAMENT_MANAGER,
-                        UiOperation.READ,
-                        title = request.name,
-                        allowedWrites = setOf(UiOperation.UPDATE),
-                        recordId = id.toString(),
-                    ),
-                ),
+            ResourceRecord(
                 item = TournamentData(
                     id = id,
                     name = request.name,
@@ -149,7 +127,7 @@ class TournamentUpdateControllerTests(
         }
 
         val ordered = inOrder(service, auditReader)
-        ordered.verify(service).form(id)
+        ordered.verify(service).editForm(id)
         ordered.verify(service).update(id, request)
         ordered.verify(auditReader).findLatest(Tournament::class.java, listOf(id))
         ordered.verifyNoMoreInteractions()
@@ -223,7 +201,7 @@ class TournamentUpdateControllerTests(
             status { isNotFound() }
         }
 
-        verify(service).form(id)
+        verify(service).editForm(id)
         verify(service).update(id, request)
         verifyNoMoreInteractions(service)
     }

@@ -1,24 +1,21 @@
 package com.abeesmall.tournup.controller.season
 
-import com.abeesmall.tournup.dto.ui.UiRecordResponse
-
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.UiOperation
-
+import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
+import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
-import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.season.SeasonResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
-import com.abeesmall.tournup.ui.UiApplication
-import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
-import com.abeesmall.tournup.service.season.SeasonService
+import com.abeesmall.tournup.service.ResourceRecord
 import com.abeesmall.tournup.service.season.SeasonFieldConflictException
+import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.service.season.SeasonTournamentNotFoundException
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
+import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
 import java.time.Instant
 import java.util.UUID
 import org.hamcrest.Matchers.contains
@@ -42,8 +39,8 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(SeasonController::class)
-@Import(SecurityConfiguration::class)
+@WebMvcTest(SeasonController::class, ResourceCrudController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, SeasonResourceHandler::class)
 class SeasonCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
@@ -61,17 +58,7 @@ class SeasonCreateControllerTests(
     private val namingUrl = "/api/seasons/naming-context/?tournamentId=$tournamentId"
     private val request = SeasonWriteRequest("2026 S4", "2026-s4", 2026, tournamentId)
     private val created = SeasonData(UUID.randomUUID(), tournamentId, "2026 S4", "2026-s4", 2026)
-    private val createdResponse = UiRecordResponse(
-        manifest = UiManifestResolver.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                UiApplication.TOURNAMENT_MANAGER,
-                UiOperation.READ,
-                title = created.name,
-                allowedWrites = setOf(UiOperation.UPDATE),
-                recordId = created.id.toString(),
-            ),
-        ),
+    private val createdResponse = ResourceRecord(
         item = created,
         included = mapOf("tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open"))),
     )
@@ -79,16 +66,8 @@ class SeasonCreateControllerTests(
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers receive a prefilled editable reference with the same lookup contract`(role: String) {
-        whenever(service.form(UiApplication.TOURNAMENT_MANAGER, tournamentId)).thenReturn(
-            UiRecordResponse(
-                manifest = UiManifestResolver.resolve(
-                    seasonResourceDefinition(),
-                    UiManifestContext(
-                        UiApplication.TOURNAMENT_MANAGER,
-                        UiOperation.CREATE,
-                        allowedWrites = setOf(UiOperation.CREATE),
-                    ),
-                ),
+        whenever(service.createForm( tournamentId)).thenReturn(
+            ResourceRecord(
                 item = SeasonWriteRequest("", "", null, tournamentId),
                 included = mapOf(
                     "tournament" to listOf(mapOf("id" to tournamentId, "name" to "Winter Open")),
@@ -303,7 +282,7 @@ class SeasonCreateControllerTests(
 
     @Test
     fun `unknown tournament returns not found for all creation endpoints`() {
-        whenever(service.form(UiApplication.TOURNAMENT_MANAGER, tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
+        whenever(service.createForm( tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
         whenever(service.namingContext(tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
         whenever(service.create(request)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
 
@@ -325,15 +304,8 @@ class SeasonCreateControllerTests(
 
     @Test
     fun `form can be requested without selecting a tournament`() {
-        whenever(service.form(UiApplication.TOURNAMENT_MANAGER, null)).thenReturn(
-            UiRecordResponse(UiManifestResolver.resolve(
-                seasonResourceDefinition(),
-                UiManifestContext(
-                    UiApplication.TOURNAMENT_MANAGER,
-                    UiOperation.CREATE,
-                    allowedWrites = setOf(UiOperation.CREATE),
-                ),
-            ), item = SeasonWriteRequest("", "", null, null)),
+        whenever(service.createForm( null)).thenReturn(
+            ResourceRecord( item = SeasonWriteRequest("", "", null, null)),
         )
 
         mockMvc.get(formUrl) {

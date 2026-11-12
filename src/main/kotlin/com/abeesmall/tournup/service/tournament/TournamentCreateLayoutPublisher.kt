@@ -1,17 +1,17 @@
 package com.abeesmall.tournup.service.tournament
 
-import com.abeesmall.tournup.manifest.tournament.tournamentFieldCatalogue
+import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
 import com.abeesmall.tournup.ui.LayoutValidationReport
 import com.abeesmall.tournup.ui.UiLayoutRepository
 import com.abeesmall.tournup.ui.UiLayoutRevisionId
 import com.abeesmall.tournup.ui.UiLayoutRevisionRepository
 import com.abeesmall.tournup.ui.UiLayoutType
+import com.abeesmall.tournup.ui.UiManifestResolver
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.validateLayoutDefinition
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-
 
 class InvalidUiLayoutException(
     val report: LayoutValidationReport,
@@ -21,6 +21,7 @@ class InvalidUiLayoutException(
 class TournamentCreateLayoutPublisher(
     private val layouts: UiLayoutRepository,
     private val revisions: UiLayoutRevisionRepository,
+    private val manifests: UiManifestResolver,
 ) {
     @Transactional
     fun publish(layoutId: UUID, revisionNumber: Int) {
@@ -45,7 +46,7 @@ class TournamentCreateLayoutPublisher(
             "Tournament creation requires a form layout"
         }
 
-        val catalogue = tournamentFieldCatalogue()
+        val catalogue = manifests.fields(tournamentResourceDefinition())
         val report = validateLayoutDefinition(
             revision.definition,
             catalogue.mapValues { it.value.dataType },

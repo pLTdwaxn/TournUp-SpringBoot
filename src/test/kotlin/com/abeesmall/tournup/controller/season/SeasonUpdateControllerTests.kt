@@ -1,14 +1,18 @@
 package com.abeesmall.tournup.controller.season
 
-import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.season.SeasonRepository
+import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.resource.season.SeasonResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
+import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -37,8 +41,8 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(SeasonController::class)
-@Import(SecurityConfiguration::class, SeasonService::class)
+@WebMvcTest(SeasonController::class, ResourceCrudController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, SeasonResourceHandler::class, SeasonService::class)
 class SeasonUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,

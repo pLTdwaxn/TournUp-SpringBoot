@@ -1,11 +1,10 @@
 package com.abeesmall.tournup.manifest.season
 
 import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.UiOperation
-
+import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiManifestContext
+import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiWidget
 import com.abeesmall.tournup.ui.resource.UiResourceConfiguration
 import java.util.UUID
@@ -13,9 +12,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 class SeasonFieldCatalogueTests {
-    private val create = UiManifestResolver.resolve(
+    @RegisterExtension @JvmField val ui = UiTestSupport()
+
+    private val create = ui.manifests.resolve(
         seasonResourceDefinition(),
         UiManifestContext(
             UiApplication.TOURNAMENT_MANAGER,
@@ -23,7 +25,7 @@ class SeasonFieldCatalogueTests {
             allowedWrites = setOf(UiOperation.CREATE),
         ),
     )
-    private val edit = UiManifestResolver.resolve(
+    private val edit = ui.manifests.resolve(
         seasonResourceDefinition(),
         UiManifestContext(
             UiApplication.TOURNAMENT_MANAGER,
@@ -32,7 +34,7 @@ class SeasonFieldCatalogueTests {
             recordId = UUID.randomUUID().toString(),
         ),
     )
-    private val detail = UiManifestResolver.resolve(
+    private val detail = ui.manifests.resolve(
         seasonResourceDefinition(),
         UiManifestContext(
             UiApplication.TOURNAMENT_MANAGER,
@@ -43,9 +45,9 @@ class SeasonFieldCatalogueTests {
 
     @Test
     fun `resource and operation manifests agree on shared field metadata`() {
-        val registered = UiResourceConfiguration().seasonUiResource().fields
+        val registered = ui.manifests.fields(UiResourceConfiguration().seasonUiResource())
             .mapValues { (_, field) -> field.toUiField(UiWidget.DISPLAY) }
-        for ((id, definition) in seasonFieldCatalogue()) {
+        for ((id, definition) in ui.manifests.fields(seasonResourceDefinition())) {
             for (fields in listOf(create.fields, edit.fields, detail.fields, registered)) {
                 val field = fields.getValue(id)
                 assertEquals(definition.label, field.label)
@@ -70,7 +72,7 @@ class SeasonFieldCatalogueTests {
         assertTrue(edit.fields.values.all { it.behaviours.isEmpty() })
         assertTrue(detail.fields.values.all { !it.editable && it.widget == UiWidget.DISPLAY })
         assertTrue(detail.fields.values.all { it.behaviours.isEmpty() })
-        assertEquals(listOf("name"), UiManifestResolver.resolve(
+        assertEquals(listOf("name"), ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(
                 UiApplication.TOURNAMENT_MANAGER,
@@ -78,7 +80,7 @@ class SeasonFieldCatalogueTests {
                 allowedWrites = if (false) setOf(UiOperation.CREATE) else emptySet(),
             ),
         ).layout.columns)
-        assertEquals(setOf("fromYear", "name", "slug"), UiManifestResolver.resolve(
+        assertEquals(setOf("fromYear", "name", "slug"), ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(
                 UiApplication.TOURNAMENT_MANAGER,

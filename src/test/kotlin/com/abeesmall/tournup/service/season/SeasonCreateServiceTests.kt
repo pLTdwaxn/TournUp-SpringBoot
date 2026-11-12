@@ -1,8 +1,7 @@
 package com.abeesmall.tournup.service.season
 
-import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.season.SeasonData
-import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
@@ -11,7 +10,6 @@ import jakarta.validation.ConstraintViolationException
 import jakarta.validation.Validation
 import java.sql.SQLException
 import java.util.Optional
-import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -72,7 +70,7 @@ class SeasonCreateServiceTests {
 
     @Test
     fun `unselected form does not query records or choose a tournament`() {
-        val response = service.form(UiApplication.TOURNAMENT_MANAGER, null)
+        val response = service.createForm(null)
 
         assertEquals(SeasonWriteRequest("", "", null, null), response.item)
         assertEquals(emptyMap(), response.included)
@@ -80,18 +78,15 @@ class SeasonCreateServiceTests {
     }
 
     @Test
-    fun `prefilled form includes a resource projection and keeps the reference editable`() {
+    fun `prefilled form includes the selected tournament reference`() {
         whenever(tournaments.findById(tournament.id)).thenReturn(Optional.of(tournament))
-        val empty = service.form(UiApplication.TOURNAMENT_MANAGER, null)
-        val selected = service.form(UiApplication.TOURNAMENT_MANAGER, tournament.id)
+        val selected = service.createForm(tournament.id)
 
-        assertEquals(empty.manifest, selected.manifest)
         assertEquals(tournament.id, selected.item.tournamentId)
         assertEquals(
             mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
             selected.included,
         )
-        assertEquals(true, selected.manifest.fields.getValue("tournamentId").editable)
         verify(tournaments).findById(tournament.id)
         verifyNoMoreInteractions(tournaments)
         verifyNoInteractions(seasons)
@@ -112,7 +107,7 @@ class SeasonCreateServiceTests {
 
         assertFailsWith<SeasonTournamentNotFoundException> { service.namingContext(tournament.id) }
         assertFailsWith<SeasonTournamentNotFoundException> {
-            service.form(UiApplication.TOURNAMENT_MANAGER, tournament.id)
+            service.createForm(tournament.id)
         }
 
         verifyNoInteractions(seasons)
@@ -142,7 +137,6 @@ class SeasonCreateServiceTests {
             mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
             response.included,
         )
-        assertEquals("/api/seasons/${saved.id}/edit/", response.manifest.commands.single().href)
         verify(tournaments).findById(tournament.id)
         verify(seasons).existsByTournamentIdAndName(tournament.id, custom.name)
         verify(seasons).existsByTournamentIdAndSlug(tournament.id, custom.slug)

@@ -1,6 +1,5 @@
 package com.abeesmall.tournup.service.tournament
 
-import com.abeesmall.tournup.ui.PublishedUiLayoutReader
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
 import com.abeesmall.tournup.model.tournament.HandicapMode
@@ -8,6 +7,7 @@ import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import jakarta.validation.Validation
 import java.sql.SQLException
 import java.util.Optional
 import kotlin.test.assertEquals
@@ -16,6 +16,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import org.hibernate.exception.ConstraintViolationException
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when` as whenever
 import org.mockito.Mockito.mock
@@ -25,7 +26,11 @@ import org.springframework.dao.DataIntegrityViolationException
 
 class TournamentUpdateServiceTests {
     private val tournaments = mock(TournamentRepository::class.java)
-    private val service = TournamentService(tournaments, mock(PublishedUiLayoutReader::class.java))
+    private val validatorFactory = Validation.buildDefaultValidatorFactory()
+    private val service = TournamentService(tournaments, validatorFactory.validator)
+
+    @AfterEach
+    fun closeValidatorFactory() = validatorFactory.close()
 
     private val existing = Tournament(
         slug = "original",
@@ -41,6 +46,14 @@ class TournamentUpdateServiceTests {
         participationMode = ParticipationMode.REGISTRATION,
         handicapMode = HandicapMode.CARRY_FORWARD,
     )
+
+    @Test
+    fun `invalid direct updates fail before loading or changing records`() {
+        for (invalid in listOf(request.copy(name = " "), request.copy(slug = "Invalid_Slug"))) {
+            assertFailsWith<jakarta.validation.ConstraintViolationException> { service.update(existing.id, invalid) }
+        }
+        org.mockito.Mockito.verifyNoInteractions(tournaments)
+    }
 
     @Test
     fun `replaces editable fields while preserving the id`() {
@@ -69,7 +82,6 @@ class TournamentUpdateServiceTests {
             ),
             response.item,
         )
-        assertEquals(request.name, response.manifest.title)
 
         verify(tournaments).findById(existing.id)
         verify(tournaments).findBySlug(request.slug)
@@ -157,7 +169,7 @@ class TournamentUpdateServiceTests {
         whenever(tournaments.findById(existing.id))
             .thenReturn(Optional.of(existing))
 
-        val response = assertNotNull(service.form(existing.id))
+        val response = assertNotNull(service.editForm(existing.id))
 
         assertEquals(
             TournamentUpdateRequest(
@@ -170,10 +182,6 @@ class TournamentUpdateServiceTests {
             ),
             response.item,
         )
-        assertEquals(
-            "/api/tournaments/${existing.id}/",
-            response.manifest.commands.single().href,
-        )
 
         verify(tournaments).findById(existing.id)
         verifyNoMoreInteractions(tournaments)
@@ -184,7 +192,7 @@ class TournamentUpdateServiceTests {
         whenever(tournaments.findById(existing.id))
             .thenReturn(Optional.empty())
 
-        assertNull(service.form(existing.id))
+        assertNull(service.editForm(existing.id))
 
         verify(tournaments).findById(existing.id)
         verifyNoMoreInteractions(tournaments)

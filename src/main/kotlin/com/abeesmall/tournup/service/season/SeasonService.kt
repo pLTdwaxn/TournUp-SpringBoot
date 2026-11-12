@@ -4,30 +4,25 @@ import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.ui.LookupResponse
-import com.abeesmall.tournup.dto.ui.UiCollectionResponse
-import com.abeesmall.tournup.dto.ui.UiRecordResponse
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
+import com.abeesmall.tournup.resource.season.seasonCreateContract
+import com.abeesmall.tournup.resource.season.seasonUpdateContract
 import com.abeesmall.tournup.service.LookupQuery
 import com.abeesmall.tournup.service.RecordContextRequiredException
+import com.abeesmall.tournup.service.ResourceRecord
 import com.abeesmall.tournup.service.parseRecordId
-import com.abeesmall.tournup.service.toUiResponse
 import com.abeesmall.tournup.service.tournament.includedReference
-import com.abeesmall.tournup.ui.UiApplication
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.UiOperation
-import jakarta.validation.ConstraintViolationException
+import com.abeesmall.tournup.validation.WriteValidator
 import jakarta.validation.Validator
 import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-
 
 @Service
 class SeasonService(
@@ -46,22 +41,11 @@ class SeasonService(
     }
 
     @Transactional(readOnly = true)
-    fun form(application: UiApplication, tournamentId: UUID?): UiRecordResponse<SeasonWriteRequest> {
-        val manifest = UiManifestResolver.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                application,
-                UiOperation.CREATE,
-                allowedWrites = setOf(UiOperation.CREATE),
-            ),
-        )
-        if (tournamentId == null) return UiRecordResponse(manifest, item = SeasonWriteRequest("", "", null, null))
+    fun createForm(tournamentId: UUID?): ResourceRecord<SeasonWriteRequest> {
+        val initial = requireNotNull(seasonCreateContract.initialValues).invoke()
+        if (tournamentId == null) return ResourceRecord(initial)
         val tournament = requireTournament(tournamentId)
-        return UiRecordResponse(
-            manifest = manifest,
-            item = SeasonWriteRequest("", "", null, tournament.id),
-            included = tournament.includedReference(),
-        )
+        return ResourceRecord(initial.copy(tournamentId = tournament.id), tournament.includedReference())
     }
 
     @Transactional(readOnly = true)
@@ -79,11 +63,8 @@ class SeasonService(
     }
 
     @Transactional
-    fun create(request: SeasonWriteRequest): UiRecordResponse<SeasonData> {
-        val violations = validator.validate(request)
-        if (violations.isNotEmpty()) {
-            throw ConstraintViolationException(violations)
-        }
+    fun create(request: SeasonWriteRequest): ResourceRecord<SeasonData> {
+        WriteValidator.validate(validator, request)
 
         val tournamentId = requireNotNull(request.tournamentId)
         val tournament = requireTournament(tournamentId)
@@ -107,7 +88,7 @@ class SeasonService(
             throw seasonFieldConflict(failure) ?: failure
         }
 
-        return seasonDetailResponse(season, canUpdate = true)
+        return seasonRecord(season)
     }
 
     private fun requireTournament(tournamentId: UUID): Tournament =
@@ -119,8 +100,7 @@ class SeasonService(
     fun find(
         identifier: String,
         tournamentIdentifier: String? = null,
-        canUpdate: Boolean = false,
-    ): UiRecordResponse<SeasonData>? {
+    ): ResourceRecord<SeasonData>? {
         val id = parseRecordId(identifier)
         if (id == null && tournamentIdentifier == null) {
             throw RecordContextRequiredException("Tournament")
@@ -138,54 +118,26 @@ class SeasonService(
             return null
         }
 
-        return seasonDetailResponse(season, canUpdate)
+        return seasonRecord(season)
     }
 
     @Transactional(readOnly = true)
-    fun list(
-        tournamentId: UUID?,
-        pageable: Pageable,
-        canCreate: Boolean = false,
-    ): UiCollectionResponse<SeasonData> {
+    fun list(tournamentId: UUID?, pageable: Pageable): Page<SeasonData> {
         if (tournamentId != null && !tournaments.existsById(tournamentId)) {
             throw SeasonTournamentNotFoundException(tournamentId)
         }
-        val result = if (tournamentId == null) {
-            seasons.findAll(pageable)
-        } else {
-            seasons.findAllByTournamentId(tournamentId, pageable)
-        }
-
-        return result.toUiResponse(
-            manifest = UiManifestResolver.resolve(
-                seasonResourceDefinition(),
-                UiManifestContext(
-                    UiApplication.TOURNAMENT_MANAGER,
-                    UiOperation.LIST,
-                    allowedWrites = if (canCreate) setOf(UiOperation.CREATE) else emptySet(),
-                    relatedIds = tournamentId?.let { mapOf("tournamentId" to it.toString()) } ?: emptyMap(),
-                ),
-            ),
-            transform = { it.toData() },
-        )
+        val result = if (tournamentId == null) seasons.findAll(pageable)
+            else seasons.findAllByTournamentId(tournamentId, pageable)
+        return result.map { it.toData() }
     }
 
     @Transactional(readOnly = true)
-    fun form(id: UUID, tournamentId: UUID? = null): UiRecordResponse<SeasonWriteRequest>? {
+    fun editForm(id: UUID, tournamentId: UUID? = null): ResourceRecord<SeasonWriteRequest>? {
         val season = seasons.findById(id).orElse(null) ?: return null
         if (tournamentId != null && season.tournament.id != tournamentId) {
             return null
         }
-        return UiRecordResponse(
-            manifest = UiManifestResolver.resolve(
-                seasonResourceDefinition(),
-                UiManifestContext(
-                    UiApplication.TOURNAMENT_MANAGER,
-                    UiOperation.UPDATE,
-                    allowedWrites = setOf(UiOperation.UPDATE),
-                    recordId = season.id.toString(),
-                ),
-            ),
+        return ResourceRecord(
             item = SeasonWriteRequest(season.name, season.slug, season.fromYear, season.tournament.id),
             included = season.tournament.includedReference(),
         )
@@ -196,18 +148,15 @@ class SeasonService(
         id: UUID,
         request: SeasonWriteRequest,
         tournamentId: UUID? = null,
-    ): UiRecordResponse<SeasonData>? {
-        val violations = validator.validate(request)
-        if (violations.isNotEmpty()) {
-            throw ConstraintViolationException(violations)
-        }
+    ): ResourceRecord<SeasonData>? {
+        WriteValidator.validate(validator, request)
         val season = seasons.findById(id).orElse(null) ?: return null
         val actualTournamentId = season.tournament.id
         if (tournamentId != null && actualTournamentId != tournamentId) {
             return null
         }
-        if (request.tournamentId != actualTournamentId) {
-            throw SeasonTournamentChangeException()
+        seasonUpdateContract.requireUnchanged(request, mapOf("tournamentId" to actualTournamentId)) {
+            SeasonTournamentChangeException()
         }
 
         if (seasons.existsByTournamentIdAndNameAndIdNot(actualTournamentId, request.name, id)) {
@@ -226,21 +175,8 @@ class SeasonService(
             throw seasonFieldConflict(failure) ?: failure
         }
 
-        return seasonDetailResponse(saved, canUpdate = true)
+        return seasonRecord(saved)
     }
 }
-internal fun seasonDetailResponse(season: Season, canUpdate: Boolean): UiRecordResponse<SeasonData> =
-    UiRecordResponse(
-        manifest = UiManifestResolver.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                UiApplication.TOURNAMENT_MANAGER,
-                UiOperation.READ,
-                title = season.name,
-                allowedWrites = if (canUpdate) setOf(UiOperation.UPDATE) else emptySet(),
-                recordId = season.id.toString(),
-            ),
-        ),
-        item = season.toData(),
-        included = season.tournament.includedReference(),
-    )
+private fun seasonRecord(season: Season): ResourceRecord<SeasonData> =
+    ResourceRecord(season.toData(), season.tournament.includedReference())

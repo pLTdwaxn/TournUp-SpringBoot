@@ -1,28 +1,29 @@
 package com.abeesmall.tournup.manifest.season
 
-import com.abeesmall.tournup.dto.ui.UiRecordResponse
-
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.UiOperation
-
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
+import com.abeesmall.tournup.dto.ui.UiRecordResponse
+import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiManifestContext
+import com.abeesmall.tournup.ui.UiOperation
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import tools.jackson.databind.json.JsonMapper
 
 class SeasonCreateManifestTests {
+    @RegisterExtension @JvmField val ui = UiTestSupport()
+
     private val mapper = JsonMapper.builder().build()
     private val application = UiApplication.TOURNAMENT_MANAGER
 
     @Test
     fun `form defines an editable required reference before its dependent fields`() {
-        val json = mapper.readTree(mapper.writeValueAsString(UiManifestResolver.resolve(
+        val json = mapper.readTree(mapper.writeValueAsString(ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(
                 application,
@@ -59,7 +60,7 @@ class SeasonCreateManifestTests {
 
     @Test
     fun `behaviours declare reference and year dependencies without the old sourceField contract`() {
-        val json = mapper.readTree(mapper.writeValueAsString(UiManifestResolver.resolve(
+        val json = mapper.readTree(mapper.writeValueAsString(ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(
                 application,
@@ -85,7 +86,7 @@ class SeasonCreateManifestTests {
     @Test
     fun `prefilled values and included reference records leave the field definition unchanged`() {
         val id = UUID.randomUUID()
-        val empty = UiRecordResponse(UiManifestResolver.resolve(
+        val empty = UiRecordResponse(ui.manifests.resolve(
             seasonResourceDefinition(),
             UiManifestContext(
                 application,

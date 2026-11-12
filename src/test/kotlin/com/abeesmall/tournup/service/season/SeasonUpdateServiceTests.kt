@@ -1,11 +1,11 @@
 package com.abeesmall.tournup.service.season
 
-import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
+import com.abeesmall.tournup.repository.tournament.TournamentRepository
 import jakarta.validation.ConstraintViolationException
 import jakarta.validation.Validation
 import java.sql.SQLException
@@ -74,25 +74,16 @@ class SeasonUpdateServiceTests {
     }
 
     @Test
-    fun `edit form includes its readonly tournament and disables generated suggestions`() {
+    fun `edit form includes the stored tournament reference`() {
         whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
 
-        val response = assertNotNull(service.form(existing.id))
+        val response = assertNotNull(service.editForm(existing.id))
 
         assertEquals(SeasonWriteRequest("2026 S1", "2026-s1", 2026, tournament.id), response.item)
         assertEquals(
             mapOf("tournament" to listOf(mapOf("id" to tournament.id, "name" to tournament.name))),
             response.included,
         )
-        val reference = response.manifest.fields.getValue("tournamentId")
-        assertEquals(false, reference.editable)
-        assertEquals("tournament", reference.reference?.resource)
-        for (field in listOf("fromYear", "name", "slug")) {
-            assertEquals(true, response.manifest.fields.getValue(field).editable)
-        }
-        assertEquals("/api/seasons/${existing.id}/", response.manifest.commands.single().href)
-        assertEquals(emptyList(), response.manifest.fields.getValue("name").behaviours)
-        assertEquals(emptyList(), response.manifest.fields.getValue("slug").behaviours)
         verify(seasons).findById(existing.id)
         verifyNoMoreInteractions(seasons)
     }
@@ -101,7 +92,7 @@ class SeasonUpdateServiceTests {
     fun `missing season has no edit form`() {
         whenever(seasons.findById(existing.id)).thenReturn(Optional.empty())
 
-        assertNull(service.form(existing.id))
+        assertNull(service.editForm(existing.id))
 
         verify(seasons).findById(existing.id)
         verifyNoMoreInteractions(seasons)
@@ -112,7 +103,7 @@ class SeasonUpdateServiceTests {
         whenever(seasons.findById(existing.id)).thenReturn(Optional.of(existing))
         val wrongParent = UUID.randomUUID()
 
-        assertNull(service.form(existing.id, wrongParent))
+        assertNull(service.editForm(existing.id, wrongParent))
         assertNull(service.update(existing.id, request, wrongParent))
 
         assertEquals("2026 S1", existing.name)

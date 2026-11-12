@@ -2,58 +2,61 @@ package com.abeesmall.tournup.ui.resource
 
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceRelationship
+import com.abeesmall.tournup.resource.Resource
+import com.abeesmall.tournup.resource.ResourceDefinition
+import com.abeesmall.tournup.support.registryFor
 import com.abeesmall.tournup.ui.UiApplication
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import org.junit.jupiter.api.Test
 
 class UiResourceRegistryTests {
-    @UiResource(key = "sample", pluralName = "samples")
+    @Resource(key = "sample", pluralName = "samples")
     private class First
 
-    @UiResource(key = "sample", pluralName = "other-samples")
+    @Resource(key = "sample", pluralName = "other-samples")
     private class Duplicate
 
-    @UiResource(key = "", pluralName = "samples")
+    @Resource(key = "", pluralName = "samples")
     private class EmptyKey
 
-    @UiResource(key = "other", pluralName = "samples")
+    @Resource(key = "other", pluralName = "samples")
     private class DuplicatePlural
 
-    @UiResource(key = "sample", pluralName = "")
+    @Resource(key = "sample", pluralName = "")
     private class EmptyPlural
 
-    @UiResource(key = "sample", pluralName = "Samples")
+    @Resource(key = "sample", pluralName = "Samples")
     private class UppercasePlural
 
-    @UiResource(key = "sample", pluralName = "../samples")
+    @Resource(key = "sample", pluralName = "../samples")
     private class PathPlural
 
-    @UiResource(key = "person", pluralName = "people")
+    @Resource(key = "person", pluralName = "people")
     private class Person
 
     private class Unmarked
 
     @Test
     fun `registers only explicitly supplied annotated DTOs`() {
-        val registry = UiResourceRegistry(listOf(registration(First::class.java)))
+        val registry = uiRegistry(listOf(registration(First::class.java)))
 
         assertEquals(setOf("sample"), registry.resources.keys)
-        assertEquals(First::class.java, registry.resources.getValue("sample").resourceClass)
-        assertEquals("samples", registry.resources.getValue("sample").pluralName)
+        assertEquals(First::class.java, registry.resources.getValue("sample").definition.resourceClass)
+        assertEquals("samples", registry.resources.getValue("sample").definition.pluralName)
     }
 
     @Test
     fun `plural names come from DTO metadata including irregular plurals`() {
-        val registry = UiResourceRegistry(listOf(registration(Person::class.java)))
+        val registry = uiRegistry(listOf(registration(Person::class.java)))
 
-        assertEquals("people", registry.resources.getValue("person").pluralName)
+        assertEquals("people", registry.resources.getValue("person").definition.pluralName)
     }
 
     @Test
     fun `plural names must be unique across resources`() {
         assertFailsWith<IllegalArgumentException> {
-            UiResourceRegistry(listOf(registration(First::class.java), registration(DuplicatePlural::class.java)))
+            uiRegistry(listOf(registration(First::class.java), registration(DuplicatePlural::class.java)))
         }
     }
 
@@ -61,7 +64,7 @@ class UiResourceRegistryTests {
     fun `plural names must be nonempty lowercase URL segments`() {
         for (model in listOf(EmptyPlural::class.java, UppercasePlural::class.java, PathPlural::class.java)) {
             assertFailsWith<IllegalArgumentException> {
-                UiResourceRegistry(listOf(registration(model)))
+                uiRegistry(listOf(registration(model)))
             }
         }
     }
@@ -69,28 +72,28 @@ class UiResourceRegistryTests {
     @Test
     fun `duplicate resource keys are rejected`() {
         assertFailsWith<IllegalArgumentException> {
-            UiResourceRegistry(listOf(registration(First::class.java), registration(Duplicate::class.java)))
+            uiRegistry(listOf(registration(First::class.java), registration(Duplicate::class.java)))
         }
     }
 
     @Test
     fun `unmarked DTOs cannot be registered`() {
         assertFailsWith<IllegalArgumentException> {
-            UiResourceRegistry(listOf(registration(Unmarked::class.java)))
+            uiRegistry(listOf(registration(Unmarked::class.java)))
         }
     }
 
     @Test
     fun `empty resource keys are rejected`() {
         assertFailsWith<IllegalArgumentException> {
-            UiResourceRegistry(listOf(registration(EmptyKey::class.java)))
+            uiRegistry(listOf(registration(EmptyKey::class.java)))
         }
     }
 
     @Test
     fun `relationships cannot target an unregistered resource`() {
         assertFailsWith<IllegalArgumentException> {
-            UiResourceRegistry(
+            uiRegistry(
                 listOf(
                     registration(First::class.java).copy(
                         relationships = listOf(UiResourceRelationship("parentId", "missing", "Parent", true)),
@@ -100,17 +103,18 @@ class UiResourceRegistryTests {
         }
     }
 
+    private fun uiRegistry(registrations: List<UiResourceRegistration>) =
+        UiResourceRegistry(registrations, registryFor(registrations.map { it.definition }))
+
     private fun registration(model: Class<*>): UiResourceRegistration = UiResourceRegistration(
-        resourceClass = model,
+        definition = ResourceDefinition(model, canRead = { it.isAuthenticated }, canWrite = { false }),
         audited = false,
         applications = setOf(UiApplication.TOURNAMENT_MANAGER),
         label = "Samples",
         displayField = null,
-        fields = emptyMap(),
+        presentation = emptyMap(),
         identifier = UiResourceIdentifier("id", "uuid"),
         relationships = emptyList(),
         operations = emptyList(),
-        canRead = { it.isAuthenticated },
-        canWrite = { false },
     )
 }
