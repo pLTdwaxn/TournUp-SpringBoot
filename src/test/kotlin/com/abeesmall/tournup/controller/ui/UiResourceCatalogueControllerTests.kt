@@ -2,19 +2,14 @@ package com.abeesmall.tournup.controller.ui
 
 import com.abeesmall.tournup.auth.AuthenticatedUser
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
-import com.abeesmall.tournup.resource.ResourceRegistry
-import com.abeesmall.tournup.resource.season.SeasonResourceHandler
-import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.service.ui.UiResourceCatalogueService
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
-import com.abeesmall.tournup.support.registryFor
 import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiManifestResolver
-import com.abeesmall.tournup.ui.resource.UiResourceConfiguration
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -39,14 +34,10 @@ import org.springframework.test.web.servlet.get
 
 @WebMvcTest(UiResourceCatalogueController::class)
 @Import(
-    SecurityConfiguration::class,
+    SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
     ResourceWebTestConfiguration::class,
-    ResourceRegistry::class,
-    SeasonResourceHandler::class,
-    TournamentResourceHandler::class,
     UiResourceCatalogueService::class,
-    UiResourceRegistry::class,
-    UiResourceConfiguration::class,
+    com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
 )
 class UiResourceCatalogueControllerTests(
     @Autowired private val mockMvc: MockMvc,
@@ -66,9 +57,8 @@ class UiResourceCatalogueControllerTests(
     @Test
     fun `audit capability requires explicit registration and user permission`() {
         for (audited in listOf(false, true)) {
-            val registration = UiResourceConfiguration().tournamentUiResource().copy(audited = audited)
-            val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration),
-                registryFor(listOf(registration.definition))), manifests)
+            val registration = com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition().copy(audited = audited)
+            val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration)), manifests)
             for (role in listOf("PLAYER", "SUPER_ADMIN")) {
                 val authentication = viewer(role)
                 val catalogue = service.catalogue(

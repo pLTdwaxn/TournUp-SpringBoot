@@ -1,9 +1,11 @@
 package com.abeesmall.tournup.dto.season
 
-import com.abeesmall.tournup.resource.WriteField
-import com.abeesmall.tournup.resource.WriteOperation
+import com.abeesmall.tournup.validation.WriteContract
+
 import com.abeesmall.tournup.validation.ResourceName
 import com.abeesmall.tournup.validation.ResourceSlug
+import com.abeesmall.tournup.validation.WriteField
+import com.abeesmall.tournup.validation.WriteOperation
 import jakarta.validation.constraints.NotNull
 import java.util.UUID
 import tools.jackson.databind.annotation.JsonDeserialize
@@ -23,3 +25,10 @@ data class SeasonWriteRequest(
     @field:NotNull(message = "Tournament is required")
     val tournamentId: UUID?,
 )
+
+val seasonCreateContract = WriteContract(
+    SeasonWriteRequest::class, WriteOperation.CREATE,
+    initialValues = { SeasonWriteRequest("", "", null, null) },
+)
+
+val seasonUpdateContract = WriteContract(SeasonWriteRequest::class, WriteOperation.UPDATE)

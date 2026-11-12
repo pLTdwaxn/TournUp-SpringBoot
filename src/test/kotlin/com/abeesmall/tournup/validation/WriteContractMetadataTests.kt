@@ -1,15 +1,15 @@
 package com.abeesmall.tournup.validation
 
-import com.abeesmall.tournup.resource.WriteContract
-import com.abeesmall.tournup.resource.WriteOperation
-import com.abeesmall.tournup.resource.season.seasonCreateContract
-import com.abeesmall.tournup.resource.season.seasonUpdateContract
-import com.abeesmall.tournup.resource.tournament.tournamentCreateContract
-import com.abeesmall.tournup.resource.tournament.tournamentUpdateContract
+import com.abeesmall.tournup.dto.season.seasonCreateContract
+import com.abeesmall.tournup.dto.season.seasonUpdateContract
+import com.abeesmall.tournup.dto.tournament.tournamentCreateContract
+import com.abeesmall.tournup.dto.tournament.tournamentUpdateContract
 import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiConstraintProjector
 import com.abeesmall.tournup.ui.UiDataType
 import com.abeesmall.tournup.ui.UiFieldPresentation
+import com.abeesmall.tournup.validation.WriteContract
+import com.abeesmall.tournup.validation.WriteOperation
 import jakarta.validation.Validation
 import jakarta.validation.constraints.Pattern
 import kotlin.test.assertEquals

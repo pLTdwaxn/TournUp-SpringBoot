@@ -1,14 +1,11 @@
 package com.abeesmall.tournup.controller.season
 
-import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
-import com.abeesmall.tournup.resource.ResourceRegistry
-import com.abeesmall.tournup.resource.season.SeasonResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
@@ -38,8 +35,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 
-@WebMvcTest(SeasonController::class, ResourceCrudController::class)
-@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, SeasonResourceHandler::class, SeasonService::class)
+@WebMvcTest(SeasonController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class, SeasonService::class)
 class SeasonListControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {

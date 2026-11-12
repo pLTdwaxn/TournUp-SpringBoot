@@ -2,7 +2,7 @@ package com.abeesmall.tournup.dto.season
 
 import com.abeesmall.tournup.dto.audit.AuditedResource
 import com.abeesmall.tournup.dto.audit.LastAuditValue
-import com.abeesmall.tournup.resource.Resource
+import com.abeesmall.tournup.ui.resource.Resource
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.util.UUID
 

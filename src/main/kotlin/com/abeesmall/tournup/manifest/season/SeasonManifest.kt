@@ -1,28 +1,57 @@
 package com.abeesmall.tournup.manifest.season
 
+import com.abeesmall.tournup.dto.season.seasonUpdateContract
+
+import com.abeesmall.tournup.dto.season.seasonCreateContract
+
+import com.abeesmall.tournup.dto.season.SeasonData
+import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceOperation
 import com.abeesmall.tournup.dto.ui.UiResourceRelationship
-import com.abeesmall.tournup.resource.season.seasonResource
+import com.abeesmall.tournup.security.canManageSeasons
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiBehaviour
 import com.abeesmall.tournup.ui.UiBehaviourType
 import com.abeesmall.tournup.ui.UiCommandMethod
+import com.abeesmall.tournup.ui.UiDataType
+import com.abeesmall.tournup.ui.UiFieldPresentation
 import com.abeesmall.tournup.ui.UiLayout
 import com.abeesmall.tournup.ui.UiLayoutType
 import com.abeesmall.tournup.ui.UiManifestCommand
 import com.abeesmall.tournup.ui.UiOperation
+import com.abeesmall.tournup.ui.UiReference
 import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiViewDefinition
+import com.abeesmall.tournup.ui.resource.ResourceAction
 import com.abeesmall.tournup.ui.resource.UiResourceRegistration
 
+fun seasonFieldPresentation(): Map<String, UiFieldPresentation> = mapOf(
+    "tournamentId" to UiFieldPresentation(
+        "Tournament", UiDataType.REFERENCE,
+        reference = UiReference("tournament", "lookup", "read"),
+    ),
+    "fromYear" to UiFieldPresentation("From year", UiDataType.INTEGER),
+    "name" to UiFieldPresentation(
+        "Name", UiDataType.STRING,
+    ),
+    "slug" to UiFieldPresentation(
+        "Slug", UiDataType.STRING,
+    ),
+)
 
 internal fun seasonResourceDefinition(): UiResourceRegistration {
     val all = listOf("tournamentId", "fromYear", "name", "slug")
     val form = UiLayout(UiLayoutType.FORM, listOf(UiSection("details", "Details", all)))
     val detail = UiLayout(UiLayoutType.DETAIL, listOf(UiSection("details", "Details", all)))
     return UiResourceRegistration(
-        definition = seasonResource,
+        resourceClass = SeasonData::class.java,
+        create = seasonCreateContract,
+        update = seasonUpdateContract,
+        actions = setOf(ResourceAction.LIST, ResourceAction.READ, ResourceAction.CREATE_FORM,
+        ResourceAction.UPDATE_FORM, ResourceAction.CREATE, ResourceAction.UPDATE),
+        canRead = { it.isAuthenticated },
+        canWrite = ::canManageSeasons,
         audited = true,
         applications = setOf(UiApplication.TOURNAMENT_MANAGER),
         label = "Seasons",
@@ -86,4 +115,10 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
             ),
         ),
     )
+}
+
+@org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+class SeasonManifestConfiguration {
+    @org.springframework.context.annotation.Bean
+    fun seasonUiResource() = seasonResourceDefinition()
 }

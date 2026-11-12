@@ -1,7 +1,7 @@
 package com.abeesmall.tournup.security
 
-import com.abeesmall.tournup.resource.ResourceAction
-import com.abeesmall.tournup.resource.ResourceRegistry
+import com.abeesmall.tournup.ui.resource.ResourceAction
+import com.abeesmall.tournup.ui.resource.UiResourceRegistry
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.ObjectProvider
@@ -21,14 +21,14 @@ annotation class ResourceAccess(val action: ResourceAction, val resource: String
 
 /** Runs after route selection and before argument conversion, including JSON binding. */
 @Configuration(proxyBeanMethods = false)
-class ResourceAuthorization(private val registry: ObjectProvider<ResourceRegistry>) : HandlerInterceptor, WebMvcConfigurer {
+class ResourceAuthorization(private val registry: ObjectProvider<UiResourceRegistry>) : HandlerInterceptor, WebMvcConfigurer {
     override fun addInterceptors(registry: InterceptorRegistry) { registry.addInterceptor(this) }
 
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
         val access = (handler as? HandlerMethod)?.getMethodAnnotation(ResourceAccess::class.java) ?: return true
         val variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE) as? Map<*, *>
         val name = access.resource.ifEmpty { variables?.get("resource") as? String ?: "" }
-        val resource = registry.getObject().resources[name]?.definition
+        val resource = registry.getObject().resources.values.firstOrNull { it.pluralName == name }
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         if (access.action !in resource.actions) throw ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED)
         val authentication = SecurityContextHolder.getContext().authentication

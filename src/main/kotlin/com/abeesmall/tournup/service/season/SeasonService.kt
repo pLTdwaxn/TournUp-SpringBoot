@@ -4,12 +4,12 @@ import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.ui.LookupResponse
+import com.abeesmall.tournup.dto.season.seasonCreateContract
+import com.abeesmall.tournup.dto.season.seasonUpdateContract
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.season.SeasonRepository
 import com.abeesmall.tournup.repository.tournament.TournamentRepository
-import com.abeesmall.tournup.resource.season.seasonCreateContract
-import com.abeesmall.tournup.resource.season.seasonUpdateContract
 import com.abeesmall.tournup.service.LookupQuery
 import com.abeesmall.tournup.service.RecordContextRequiredException
 import com.abeesmall.tournup.service.ResourceRecord

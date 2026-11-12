@@ -3,14 +3,13 @@ package com.abeesmall.tournup.ui
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceOperation
 import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
-import com.abeesmall.tournup.resource.Resource
-import com.abeesmall.tournup.resource.ResourceAction
-import com.abeesmall.tournup.resource.ResourceDefinition
-import com.abeesmall.tournup.resource.WriteContract
-import com.abeesmall.tournup.resource.WriteField
-import com.abeesmall.tournup.resource.WriteOperation
 import com.abeesmall.tournup.support.UiTestSupport
+import com.abeesmall.tournup.ui.resource.Resource
+import com.abeesmall.tournup.ui.resource.ResourceAction
 import com.abeesmall.tournup.ui.resource.UiResourceRegistration
+import com.abeesmall.tournup.validation.WriteContract
+import com.abeesmall.tournup.validation.WriteField
+import com.abeesmall.tournup.validation.WriteOperation
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -46,13 +45,12 @@ class UiManifestResolverTests {
     )
 
     private fun definition(operation: UiOperation): UiResourceRegistration = UiResourceRegistration(
-        definition = ResourceDefinition(
+
             resourceClass = Sample::class.java,
             actions = ResourceAction.entries.toSet(),
             create = WriteContract(SampleWrite::class, WriteOperation.CREATE),
             update = WriteContract(SampleWrite::class, WriteOperation.UPDATE),
             canRead = { true }, canWrite = { true },
-        ),
         audited = false,
         label = "Samples",
         displayField = "name",

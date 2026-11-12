@@ -1,23 +1,98 @@
 package com.abeesmall.tournup.controller.season
 
+import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
-import com.abeesmall.tournup.resource.ResourceAction
-import com.abeesmall.tournup.resource.ResourceRequest
-import com.abeesmall.tournup.resource.season.SeasonResourceHandler
+import com.abeesmall.tournup.dto.ui.UiCollectionResponse
+import com.abeesmall.tournup.dto.ui.UiRecordResponse
+import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.security.ResourceAccess
+import com.abeesmall.tournup.service.CrudDelegate
+import com.abeesmall.tournup.service.ResourceRequest
+import com.abeesmall.tournup.service.resourcePage
 import com.abeesmall.tournup.service.season.SeasonService
+import com.abeesmall.tournup.ui.ResourceResponseComposer
+import com.abeesmall.tournup.ui.UI_APPLICATION_HEADER
+import com.abeesmall.tournup.ui.UiApplication
+import com.abeesmall.tournup.ui.UiOperation
+import com.abeesmall.tournup.ui.resource.ResourceAction
+import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import java.util.UUID
+import org.springframework.data.domain.Sort
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-class SeasonController(private val service: SeasonService, private val handler: SeasonResourceHandler) {
+class SeasonController(private val service: SeasonService, responses: ResourceResponseComposer) {
+    private val crud = CrudDelegate<SeasonWriteRequest, SeasonWriteRequest, SeasonData>(
+        seasonResourceDefinition(), responses, Season::class.java,
+        title = { it.name },
+        listRecords = { service.list(it.parentIdentifier?.let(UUID::fromString), resourcePage(it.page, it.size, Sort.by(Sort.Order.desc("fromYear"), Sort.Order.asc("name"), Sort.Order.asc("id")))) },
+        findRecord = { id, context -> service.find(id, context.parentIdentifier) },
+        createRecord = { input, _ -> service.create(input) },
+        updateRecord = { id, input, context -> service.update(id, input, context.parentIdentifier?.let(UUID::fromString)) },
+        editFormData = { id, context -> service.editForm(id, context.parentIdentifier?.let(UUID::fromString)) },
+        createFormData = { service.createForm(it.uuid("tournamentId")) },
+        application = { context, operation -> if (operation == UiOperation.CREATE) context.requireApplication() else UiApplication.TOURNAMENT_MANAGER },
+        relatedIds = { it.parentIdentifier?.let { id -> mapOf("tournamentId" to id) }.orEmpty() },
+    )
+
+    @GetMapping("/api/seasons/")
+    @ResourceAccess(ResourceAction.LIST, "seasons")
+    fun list(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @RequestParam query: Map<String, String>,
+        @RequestHeader(name = UI_APPLICATION_HEADER, required = false) application: String?,
+        authentication: Authentication,
+        response: HttpServletResponse,
+    ): UiCollectionResponse<SeasonData> {
+
+        return crud.list(ResourceRequest(authentication, application, query, page, size))
+    }
+
+    @GetMapping("/api/seasons/{identifier}/")
+    @ResourceAccess(ResourceAction.READ, "seasons")
+    fun detail(@PathVariable identifier: String,
+               authentication: Authentication): UiRecordResponse<SeasonData> =
+        crud.find(identifier, ResourceRequest(authentication))
+
+    @GetMapping("/api/seasons/create/")
+    @ResourceAccess(ResourceAction.CREATE_FORM, "seasons")
+    fun createForm(
+        @RequestParam query: Map<String, String>,
+        @RequestHeader(name = UI_APPLICATION_HEADER, required = false) application: String?,
+        authentication: Authentication,
+    ): UiRecordResponse<SeasonWriteRequest> = crud
+        .createForm(ResourceRequest(authentication, application, query))
+
+    @GetMapping("/api/seasons/{id}/edit/")
+    @ResourceAccess(ResourceAction.UPDATE_FORM, "seasons")
+    fun editForm(@PathVariable id: UUID,
+                 authentication: Authentication): UiRecordResponse<SeasonWriteRequest> =
+        crud.editForm(id, ResourceRequest(authentication))
+
+    @PostMapping("/api/seasons/")
+    @ResourceAccess(ResourceAction.CREATE, "seasons")
+    fun create(@Valid @RequestBody body: SeasonWriteRequest,
+               authentication: Authentication): ResponseEntity<UiRecordResponse<SeasonData>> =
+        crud.create(body, ResourceRequest(authentication))
+
+    @PutMapping("/api/seasons/{id}/")
+    @ResourceAccess(ResourceAction.UPDATE, "seasons")
+    fun update(@PathVariable id: UUID, @Valid @RequestBody body: SeasonWriteRequest,
+               authentication: Authentication): UiRecordResponse<SeasonData> =
+        crud.update(id, body, ResourceRequest(authentication))
+
     @GetMapping("/api/seasons/lookup/")
     @ResourceAccess(ResourceAction.LIST, "seasons")
     fun lookup(
@@ -36,22 +111,22 @@ class SeasonController(private val service: SeasonService, private val handler: 
     @ResourceAccess(ResourceAction.READ, "seasons")
     fun detail(@PathVariable identifier: String, @PathVariable tournamentIdentifier: String,
                authentication: Authentication) =
-        handler.find(identifier, ResourceRequest(authentication, parentIdentifier = tournamentIdentifier))
+        crud.find(identifier, ResourceRequest(authentication, parentIdentifier = tournamentIdentifier))
 
     @GetMapping("/api/tournaments/{tournamentId}/seasons/")
     @ResourceAccess(ResourceAction.LIST, "seasons")
     fun list(@PathVariable tournamentId: UUID, @RequestParam(defaultValue = "0") page: Int,
              @RequestParam(defaultValue = "20") size: Int, authentication: Authentication) =
-        handler.list(ResourceRequest(authentication, page = page, size = size, parentIdentifier = tournamentId.toString()))
+        crud.list(ResourceRequest(authentication, page = page, size = size, parentIdentifier = tournamentId.toString()))
 
     @GetMapping("/api/tournaments/{tournamentId}/seasons/{seasonId}/edit/")
     @ResourceAccess(ResourceAction.UPDATE_FORM, "seasons")
     fun form(@PathVariable seasonId: UUID, @PathVariable tournamentId: UUID, authentication: Authentication) =
-        handler.editForm(seasonId, ResourceRequest(authentication, parentIdentifier = tournamentId.toString()))
+        crud.editForm(seasonId, ResourceRequest(authentication, parentIdentifier = tournamentId.toString()))
 
     @PutMapping("/api/tournaments/{tournamentId}/seasons/{seasonId}/")
     @ResourceAccess(ResourceAction.UPDATE, "seasons")
     fun update(@PathVariable seasonId: UUID, @PathVariable tournamentId: UUID,
                @Valid @RequestBody request: SeasonWriteRequest, authentication: Authentication) =
-        handler.updateTyped(seasonId, request, ResourceRequest(authentication, parentIdentifier = tournamentId.toString()))
+        crud.update(seasonId, request, ResourceRequest(authentication, parentIdentifier = tournamentId.toString()))
 }

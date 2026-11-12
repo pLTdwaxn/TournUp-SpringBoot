@@ -5,7 +5,7 @@ import com.abeesmall.tournup.dto.audit.LastAuditValue
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
-import com.abeesmall.tournup.resource.Resource
+import com.abeesmall.tournup.ui.resource.Resource
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.util.UUID
 

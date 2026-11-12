@@ -1,8 +1,5 @@
 package com.abeesmall.tournup.support
 
-import com.abeesmall.tournup.resource.ResourceDefinition
-import com.abeesmall.tournup.resource.ResourceHandler
-import com.abeesmall.tournup.resource.ResourceRegistry
 import com.abeesmall.tournup.ui.ResourceResponseComposer
 import com.abeesmall.tournup.ui.UiConstraintProjector
 import com.abeesmall.tournup.ui.UiManifestResolver
@@ -10,7 +7,6 @@ import com.abeesmall.tournup.validation.WriteContractMetadata
 import jakarta.validation.Validation
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
-import org.mockito.Mockito
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Import
 
@@ -27,7 +23,3 @@ class UiTestSupport : AfterEachCallback {
 @TestConfiguration(proxyBeanMethods = false)
 @Import(ResourceResponseComposer::class, UiManifestResolver::class, UiConstraintProjector::class, WriteContractMetadata::class)
 class ResourceWebTestConfiguration
-
-fun registryFor(definitions: List<ResourceDefinition>): ResourceRegistry = ResourceRegistry(definitions.map { definition ->
-    Mockito.mock(ResourceHandler::class.java).also { Mockito.`when`(it.definition).thenReturn(definition) }
-})

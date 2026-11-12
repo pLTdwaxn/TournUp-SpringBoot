@@ -1,6 +1,5 @@
 package com.abeesmall.tournup.controller.tournament
 
-import com.abeesmall.tournup.controller.resource.ResourceCrudController
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
@@ -9,8 +8,6 @@ import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
-import com.abeesmall.tournup.resource.ResourceRegistry
-import com.abeesmall.tournup.resource.tournament.TournamentResourceHandler
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.ResourceRecord
 import com.abeesmall.tournup.service.tournament.TournamentService
@@ -40,8 +37,8 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
-@WebMvcTest(TournamentController::class, ResourceCrudController::class)
-@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, ResourceRegistry::class, TournamentResourceHandler::class)
+@WebMvcTest(TournamentController::class)
+@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class)
 class TournamentUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,

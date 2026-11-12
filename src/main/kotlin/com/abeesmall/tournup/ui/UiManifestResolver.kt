@@ -40,17 +40,17 @@ class UiManifestResolver(
     private val logger = LoggerFactory.getLogger(UiManifestResolver::class.java)
 
     fun fields(definition: UiResourceRegistration, operation: UiOperation = UiOperation.CREATE) =
-        projector.project(if (operation == UiOperation.UPDATE) definition.definition.update else definition.definition.create,
+        projector.project(if (operation == UiOperation.UPDATE) definition.update else definition.create,
             definition.presentation)
 
     fun resolve(definition: UiResourceRegistration, context: UiManifestContext): UiManifest {
         require(context.application in definition.applications) { "Unsupported UI application" }
-        val resource = definition.definition.key
+        val resource = definition.key
         val view = definition.views.getValue(context.operation)
         val form = view.layout.type == UiLayoutType.FORM
         val contract = when (context.operation) {
-            UiOperation.CREATE -> definition.definition.create
-            UiOperation.UPDATE -> definition.definition.update
+            UiOperation.CREATE -> definition.create
+            UiOperation.UPDATE -> definition.update
             else -> null
         }
         val definitions = fields(definition, context.operation)

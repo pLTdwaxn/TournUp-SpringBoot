@@ -1,20 +1,72 @@
 package com.abeesmall.tournup.manifest.tournament
 
+import com.abeesmall.tournup.dto.tournament.tournamentUpdateContract
+
+import com.abeesmall.tournup.dto.tournament.tournamentCreateContract
+
+import com.abeesmall.tournup.dto.tournament.TournamentCreateRequest
+import com.abeesmall.tournup.dto.tournament.TournamentData
+import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceOperation
-import com.abeesmall.tournup.resource.tournament.tournamentResource
+import com.abeesmall.tournup.model.tournament.HandicapMode
+import com.abeesmall.tournup.model.tournament.ParticipantType
+import com.abeesmall.tournup.model.tournament.ParticipationMode
+import com.abeesmall.tournup.security.canManageTournaments
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiBehaviour
 import com.abeesmall.tournup.ui.UiBehaviourType
 import com.abeesmall.tournup.ui.UiCommandMethod
+import com.abeesmall.tournup.ui.UiDataType
+import com.abeesmall.tournup.ui.UiFieldPresentation
 import com.abeesmall.tournup.ui.UiLayout
 import com.abeesmall.tournup.ui.UiLayoutType
 import com.abeesmall.tournup.ui.UiManifestCommand
 import com.abeesmall.tournup.ui.UiOperation
+import com.abeesmall.tournup.ui.UiOption
 import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiViewDefinition
 import com.abeesmall.tournup.ui.UiWidget
+import com.abeesmall.tournup.ui.resource.ResourceAction
 import com.abeesmall.tournup.ui.resource.UiResourceRegistration
+
+fun tournamentFieldPresentation(): Map<String, UiFieldPresentation> = mapOf(
+    "name" to UiFieldPresentation(
+        "Name", UiDataType.STRING,
+    ),
+    "slug" to UiFieldPresentation(
+        "Slug", UiDataType.STRING,
+    ),
+    "description" to UiFieldPresentation("Description", UiDataType.STRING),
+    "participantType" to UiFieldPresentation(
+        "Participant type", UiDataType.ENUM,
+        options = ParticipantType.entries.map { value ->
+            UiOption(value.name, when (value) {
+                ParticipantType.PLAYER -> "Player"
+                ParticipantType.TEAM -> "Team"
+            })
+        },
+    ),
+    "participationMode" to UiFieldPresentation(
+        "Participation mode", UiDataType.ENUM,
+        options = ParticipationMode.entries.map { value ->
+            UiOption(value.name, when (value) {
+                ParticipationMode.WALK_IN -> "Walk-in"
+                ParticipationMode.REGISTRATION -> "Registration"
+            })
+        },
+    ),
+    "handicapMode" to UiFieldPresentation(
+        "Handicap mode", UiDataType.ENUM,
+        options = HandicapMode.entries.map { value ->
+            UiOption(value.name, when (value) {
+                HandicapMode.NO_HANDICAP -> "No handicap"
+                HandicapMode.RESET_EACH_SEASON -> "Reset each season"
+                HandicapMode.CARRY_FORWARD -> "Carry forward"
+            })
+        },
+    ),
+)
 
 internal fun tournamentResourceDefinition(): UiResourceRegistration {
     val sections = listOf(
@@ -24,7 +76,13 @@ internal fun tournamentResourceDefinition(): UiResourceRegistration {
     val form = UiLayout(UiLayoutType.FORM, sections)
     val widgets = mapOf("description" to UiWidget.TEXTAREA)
     return UiResourceRegistration(
-        definition = tournamentResource,
+        resourceClass = TournamentData::class.java,
+        create = tournamentCreateContract,
+        update = tournamentUpdateContract,
+        actions = setOf(ResourceAction.LIST, ResourceAction.READ, ResourceAction.CREATE_FORM,
+        ResourceAction.UPDATE_FORM, ResourceAction.CREATE, ResourceAction.UPDATE),
+        canRead = { it.isAuthenticated },
+        canWrite = ::canManageTournaments,
         audited = true,
         applications = setOf(UiApplication.TOURNAMENT_MANAGER),
         label = "Tournaments",
@@ -63,4 +121,10 @@ internal fun tournamentResourceDefinition(): UiResourceRegistration {
             ),
         ),
     )
+}
+
+@org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+class TournamentManifestConfiguration {
+    @org.springframework.context.annotation.Bean
+    fun tournamentUiResource() = tournamentResourceDefinition()
 }

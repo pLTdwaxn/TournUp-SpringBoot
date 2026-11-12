@@ -1,0 +1,39 @@
+To avoid inheritance while keeping pagination, incoming validation, annotation-based response contracts, and zero boilerplate, use composition with a reusable generic CRUD delegate or Spring's Functional Endpoints (RouterFunction).
+
+Project Structure (Composition Approach)
+
+text
+src/main/kotlin/com/example/demo/
+├── common/
+│   ├── CrudDelegate.kt          <-- Reusable generic service handling Pageable, validation, & mapping
+│   ├── GlobalExceptionHandler.kt <-- Uniform validation error responses (@RestControllerAdvice)
+│   └── OpenApiConfig.kt         <-- OpenAPI / Swagger configuration for frontend contracts
+└── todo/
+    ├── Todo.kt                  <-- Database Entity (@Entity) - isolated from web layer
+    ├── TodoDto.kt               <-- API Contract (@NotBlank, @Schema annotations)
+    ├── TodoRepository.kt        <-- Spring Data JPA Repository (Pageable support)
+    └── TodoEndpoints.kt         <-- Standalone @RestController (injects CrudDelegate) OR RouterFunction
+Use code with caution.
+
+Architectural Flow
+
+text
+[Frontend Client]
+       │
+       ├── Reads Contract ──► [OpenAPI / Swagger] (Generated from TodoDto @Schema)
+       │
+       ▼ (HTTP + Pageable)
+[TodoController] (Standalone class, no superclass)
+       │
+       ├── 1. Validates Input (@Valid on TodoDto)
+       └── 2. Delegates to ──► [CrudDelegate<Todo, TodoDto, Long>]
+                                     │
+                                     ├── Maps DTO ──► Entity
+                                     ├── Executes [TodoRepository]
+                                     └── Maps Entity ──► DTO
+Use code with caution.
+
+How Composition Replaces Inheritance
+
+• Generic CRUD Delegate (CrudDelegate.kt): A standalone generic helper class (not a controller) that encapsulates findAll(pageable), findById, create, update, and delete, along with DTO-to-Entity mapping and 404 handling.
+• Standalone Controller (TodoController.kt): A plain @RestController with no parent class. It injects CrudDelegate via constructor and exposes clean, explicit endpoint signatures (@GetMapping, @PostMapping) so SpringDoc/OpenAPI can accurately read the @Schema annotations on TodoDto without generic type erasure issues.

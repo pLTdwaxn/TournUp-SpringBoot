@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.ui
 
-import com.abeesmall.tournup.resource.WriteContract
+import com.abeesmall.tournup.validation.WriteContract
 import com.abeesmall.tournup.validation.WriteContractMetadata
 import org.springframework.stereotype.Component
 

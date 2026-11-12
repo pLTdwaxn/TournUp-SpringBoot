@@ -6,7 +6,6 @@ import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiManifestContext
 import com.abeesmall.tournup.ui.UiOperation
 import com.abeesmall.tournup.ui.UiWidget
-import com.abeesmall.tournup.ui.resource.UiResourceConfiguration
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -45,7 +44,7 @@ class SeasonFieldCatalogueTests {
 
     @Test
     fun `resource and operation manifests agree on shared field metadata`() {
-        val registered = ui.manifests.fields(UiResourceConfiguration().seasonUiResource())
+        val registered = ui.manifests.fields(com.abeesmall.tournup.manifest.season.seasonResourceDefinition())
             .mapValues { (_, field) -> field.toUiField(UiWidget.DISPLAY) }
         for ((id, definition) in ui.manifests.fields(seasonResourceDefinition())) {
             for (fields in listOf(create.fields, edit.fields, detail.fields, registered)) {

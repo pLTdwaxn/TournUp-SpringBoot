@@ -25,13 +25,13 @@ class UiResourceCatalogueService(private val registry: UiResourceRegistry, priva
         scope = UiCatalogueScope(tenantId = user.tenantId, userId = user.userId),
         resources = registry.resources.entries
             .filter { (_, definition) ->
-                application in definition.applications && definition.definition.canRead(authentication)
+                application in definition.applications && definition.canRead(authentication)
             }
             .map { (key, definition) ->
-                val canWrite = definition.definition.canWrite(authentication)
+                val canWrite = definition.canWrite(authentication)
                 UiResourceDescriptor(
                     key = key,
-                    pluralName = definition.definition.pluralName,
+                    pluralName = definition.pluralName,
                     label = definition.label,
                     displayField = definition.displayField,
                     // TODO: Version the catalogue to expose operation-specific constraints;

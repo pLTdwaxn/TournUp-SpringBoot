@@ -1,86 +1,54 @@
-# Resource contracts and request flow
+# CRUD composition and resource contracts
 
-Resource definitions in `resource/tournament/` and `resource/season/` own request
-contracts, supported standard actions, and operation permission predicates.
-`ResourceRegistry` validates identity and uniqueness once. UI registrations reference
-those exact registered definitions and add presentation, views, and relationships.
-`@Resource` identifies a response DTO; its annotation alone never exposes routes.
+Concrete season and tournament controllers own explicit Spring MVC routes and typed
+write DTOs. Each composes `CrudDelegate` with ordinary callbacks to its transactional
+service. There is no generic route controller, routing registry, handler superclass,
+or per-resource handler subclass.
 
-## Validation and presentation
+Controllers use Spring MVC validation; services validate direct calls. The delegate supplies shared record/list/form response orchestration,
+404 handling, creation status/Location handling, and audit enrichment through the
+existing response composer. Persistence callbacks run in the existing service
+transactions; the manually composed delegate does not depend on Spring transaction
+proxying. Domain rules and mapping stay explicit in the services.
 
-- Write DTOs own Bean Validation constraints. Composed constraints such as
-  `@ResourceSlug` define rules once and allow attribute overrides per field.
-- The managed `WriteContractMetadata` reads effective constraints from the same
-  application Validator used at runtime. Its DTO metadata cache belongs to that
-  component; production never creates a separate ValidatorFactory.
-- The injected `UiConstraintProjector` and `UiManifestResolver` generate supported
-  validation hints. Labels, option labels, references, widgets, layouts, and suggestions
-  remain UI concerns. Presentation catalogues contain no authored validation rules.
-- `WriteValidator` protects bound requests and direct service calls. Services enforce
-  rules requiring stored state; database constraints protect concurrent writes.
+## Contracts and manifests
 
-Manifest `required` means a value is required after binding and defaults. It does
-not require JSON property presence: tournament creates can omit `participantType`
-and receive the DTO's `PLAYER` default, while updates must supply it.
-`acceptsOmission` describes binding before validation: an omitted nullable season
-`fromYear` binds to null and then fails `@NotNull`. Initial form values and projected
-create defaults share the request DTO factory. Read/list manifests omit form hints.
+- Write DTOs own Bean Validation constraints and write policies. The managed metadata
+  reader uses the same application Validator as runtime validation.
+- DTO policy/default helpers live with validation metadata. They do not register routes.
+- Each resource has one manifest file combining its presentation, views, request
+  contracts, access predicates, and UI registration bean. No central registration file
+  must be edited when another resource supplies its own manifest bean.
+- `UiResourceRegistry` validates catalogue identities and UI references. It is the only
+  resource catalogue, and is not a dynamic HTTP dispatcher.
+- The manifest resolver projects validation hints and applies published layouts.
+  The response composer builds envelopes and reads audit data after writes commit.
 
-`@WriteField` limits which operations can modify a request property. Other request
-properties are writable by default; fields absent from the write contract are read-only.
-Season updates use that same policy to compare `tournamentId` with persisted state
-before mutation. Missing original state fails closed. Suggestions such as `SLUGIFY`
-remain client assistance, so another valid value can be submitted. Constraints without
-an explicit client translation continue to execute on the server.
+Manifest `required` describes a value after binding/defaults, rather than JSON
+property presence. Create defaults come from the request DTO factory. Read/list views
+continue to omit form constraints. Client suggestions remain independent from server
+validation, and constraints without a client translation still run on the server.
 
-## Routing, authorization, and responses
+## Authorization and API compatibility
 
-`ResourceCrudController` owns top-level list, detail, create/edit form, create, and
-update routes. `ResourceAccess` identifies the registered operation for each generic
-or specialised endpoint. Spring Security enforces authentication and CSRF;
-`ResourceAuthorization` checks the selected route against registry permissions and
-supported actions before argument conversion or JSON binding. There is no second
-list of CRUD URL role rules. Unregistered resources and disabled actions cannot dispatch.
-Delete remains unregistered. UI operations and commands also respect supported actions.
+Spring Security enforces authentication and CSRF. `ResourceAccess` on concrete routes
+selects the catalogue policy; its interceptor authorizes before argument conversion
+or JSON parsing. Standard CRUD and specialised endpoints use the same policy source.
 
-Typed resource handlers bind DTOs and delegate to services. Services return
-`ResourceRecord` snapshots and DTO pages, materialised inside their transactions,
-including any related-reference data needed for the response. They do not resolve
-manifests, inspect UI permissions, or load published UI layouts.
+The existing URLs, DTOs, response envelopes, errors, reference selectors, layouts,
+and audit visibility are retained. Existing nested season URLs remain supported.
+The proposed slug-plus-short-ID locator is a separate change and is not introduced
+by this structural refactor.
 
-`ResourceResponseComposer` builds response envelopes and attaches permission-controlled
-audit data after service transactions return, when the Envers revision exists.
-The manifest resolver applies published list layouts only to views that opt in.
-Tournament creation retains its Location header; season creation retains its existing
-response without one.
+## Adding a resource
 
-Resource-specific controllers retain lookups, season naming context, and existing
-nested season routes. Nested CRUD delegates to the same handler and composer as
-shallow routes, preserving parent scoping without repeating response orchestration.
-
-```mermaid
-flowchart TD
-    DTO[Write DTO constraints] --> Validator[Application Validator]
-    Validator --> Metadata[Managed contract metadata]
-    Metadata --> Projector[UI constraint projection]
-    Presentation[UI presentation and suggestions] --> Manifest[Manifest resolver]
-    Projector --> Manifest
-    Client[Client] --> Auth[Authentication and CSRF]
-    Auth --> Access[Route selection and registry authorization]
-    Access --> Handler[Typed binding and validation]
-    Handler --> Service[Resource service]
-    Validator --> Service
-    Service --> Database[(Persistence and database constraints)]
-    Database --> Snapshot[Data snapshot after transaction returns]
-    Snapshot --> Composer[Response composer and audit]
-    Manifest --> Composer
-    Composer --> Client
-```
+Add its entity/migration, repository, separate read/write DTOs, transactional domain
+operations, and a concrete controller that composes the delegate. Supply its manifest
+bean and mapping/permission configuration. No shared dispatch infrastructure changes
+are required. Specialised domain operations remain ordinary service/controller methods.
 
 ## Remaining follow-ups
 
-1. Version the resource catalogue to describe create/update constraints separately.
-   Its current version exposes create constraints; form manifests already select the
-   operation-specific contract. This changes the public contract and is deferred.
-2. Add resource-owned domain problem translators as more resources are introduced.
-   Shared exception advice currently handles the existing tournament and season errors.
+- Version the UI catalogue if create/update contracts need separate catalogue entries;
+  form manifests already use the correct operation contract.
+- Generalise domain error translation when additional resources actually need it.
