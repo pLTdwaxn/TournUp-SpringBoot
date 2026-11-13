@@ -1,11 +1,10 @@
-package com.abeesmall.tournup.manifest.season
+package com.abeesmall.tournup.manifest
 
 import com.abeesmall.tournup.dto.season.seasonUpdateContract
 
 import com.abeesmall.tournup.dto.season.seasonCreateContract
 
 import com.abeesmall.tournup.dto.season.SeasonData
-import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceOperation
 import com.abeesmall.tournup.dto.ui.UiResourceRelationship
@@ -25,6 +24,8 @@ import com.abeesmall.tournup.ui.UiSection
 import com.abeesmall.tournup.ui.UiViewDefinition
 import com.abeesmall.tournup.ui.resource.ResourceAction
 import com.abeesmall.tournup.ui.resource.UiResourceRegistration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 
 fun seasonFieldPresentation(): Map<String, UiFieldPresentation> = mapOf(
     "tournamentId" to UiFieldPresentation(
@@ -48,8 +49,10 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
         resourceClass = SeasonData::class.java,
         create = seasonCreateContract,
         update = seasonUpdateContract,
-        actions = setOf(ResourceAction.LIST, ResourceAction.READ, ResourceAction.CREATE_FORM,
-        ResourceAction.UPDATE_FORM, ResourceAction.CREATE, ResourceAction.UPDATE),
+        actions = setOf(
+            ResourceAction.LIST, ResourceAction.READ, ResourceAction.CREATE_FORM,
+            ResourceAction.UPDATE_FORM, ResourceAction.CREATE, ResourceAction.UPDATE
+        ),
         canRead = { it.isAuthenticated },
         canWrite = ::canManageSeasons,
         audited = true,
@@ -107,14 +110,22 @@ internal fun seasonResourceDefinition(): UiResourceRegistration {
             UiOperation.LIST to UiViewDefinition(
                 "season-list", "Seasons", UiLayout(UiLayoutType.TABLE, columns = listOf("name")),
                 listOf("fromYear", "name", "slug"),
-                commands = listOf(UiManifestCommand(UiOperation.CREATE, "create", "Create season", "create-form", queryParameters = listOf("tournamentId"))),
+                commands = listOf(
+                    UiManifestCommand(
+                        UiOperation.CREATE,
+                        "create",
+                        "Create season",
+                        "create-form",
+                        queryParameters = listOf("tournamentId")
+                    )
+                ),
             ),
         ),
     )
 }
 
-@org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+@Configuration(proxyBeanMethods = false)
 class SeasonManifestConfiguration {
-    @org.springframework.context.annotation.Bean
+    @Bean
     fun seasonUiResource() = seasonResourceDefinition()
 }

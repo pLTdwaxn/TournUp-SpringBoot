@@ -3,7 +3,7 @@ package com.abeesmall.tournup.ui
 import com.abeesmall.tournup.dto.ui.UiCollectionResponse
 import com.abeesmall.tournup.dto.ui.UiPagination
 import com.abeesmall.tournup.dto.ui.UiRecordResponse
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.manifest.seasonResourceDefinition
 import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
 import com.abeesmall.tournup.support.UiTestSupport
 import java.nio.file.Files
@@ -16,7 +16,9 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import tools.jackson.databind.json.JsonMapper
 
 class UiResourceResponseTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     private val mapper = JsonMapper.builder().build()
 
@@ -66,9 +68,11 @@ class UiResourceResponseTests {
         val record = mapper.readTree(mapper.writeValueAsString(UiRecordResponse(manifest, mapOf("name" to ""))))
         assertFalse(record.has("context"))
         assertTrue(record.path("included").isObject)
-        val collection = mapper.readTree(mapper.writeValueAsString(
-            UiCollectionResponse(manifest, emptyList<String>(), UiPagination(0, 20, 0, 0)),
-        ))
+        val collection = mapper.readTree(
+            mapper.writeValueAsString(
+                UiCollectionResponse(manifest, emptyList<String>(), UiPagination(0, 20, 0, 0)),
+            )
+        )
         assertTrue(collection.path("items").isArray)
         assertEquals(0, collection.path("items").size())
         assertTrue(collection.path("included").isObject)

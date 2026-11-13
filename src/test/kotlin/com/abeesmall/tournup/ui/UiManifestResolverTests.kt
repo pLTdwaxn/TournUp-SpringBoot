@@ -2,7 +2,7 @@ package com.abeesmall.tournup.ui
 
 import com.abeesmall.tournup.dto.ui.UiResourceIdentifier
 import com.abeesmall.tournup.dto.ui.UiResourceOperation
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.manifest.seasonResourceDefinition
 import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.resource.Resource
 import com.abeesmall.tournup.ui.resource.ResourceAction
@@ -17,7 +17,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class UiManifestResolverTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     @Test
     fun `commands use the operation definition shared with the catalogue`() {
@@ -25,9 +27,13 @@ class UiManifestResolverTests {
         val changed = definition.copy(operations = definition.operations.map {
             if (it.id == "update") it.copy(href = "/api/revised-seasons/{id}/") else it
         })
-        val manifest = ui.manifests.resolve(changed,
-            UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.UPDATE,
-                setOf(UiOperation.UPDATE), recordId = "record-123"))
+        val manifest = ui.manifests.resolve(
+            changed,
+            UiManifestContext(
+                UiApplication.TOURNAMENT_MANAGER, UiOperation.UPDATE,
+                setOf(UiOperation.UPDATE), recordId = "record-123"
+            )
+        )
         assertEquals("/api/revised-seasons/record-123/", manifest.commands.single().href)
         assertEquals(UiCommandMethod.PUT, manifest.commands.single().method)
     }
@@ -46,11 +52,11 @@ class UiManifestResolverTests {
 
     private fun definition(operation: UiOperation): UiResourceRegistration = UiResourceRegistration(
 
-            resourceClass = Sample::class.java,
-            actions = ResourceAction.entries.toSet(),
-            create = WriteContract(SampleWrite::class, WriteOperation.CREATE),
-            update = WriteContract(SampleWrite::class, WriteOperation.UPDATE),
-            canRead = { true }, canWrite = { true },
+        resourceClass = Sample::class.java,
+        actions = ResourceAction.entries.toSet(),
+        create = WriteContract(SampleWrite::class, WriteOperation.CREATE),
+        update = WriteContract(SampleWrite::class, WriteOperation.UPDATE),
+        canRead = { true }, canWrite = { true },
         audited = false,
         label = "Samples",
         displayField = "name",
@@ -63,21 +69,27 @@ class UiManifestResolverTests {
             "name" to UiFieldPresentation("Name", UiDataType.STRING),
             "unmanaged" to UiFieldPresentation("Unmanaged", UiDataType.STRING),
         ),
-        views = mapOf(operation to UiViewDefinition(
-            id = "sample-form", title = "Sample",
-            layout = UiLayout(UiLayoutType.FORM,
-                listOf(UiSection("details", "Details", listOf("parentId", "name", "unmanaged")))),
-            fieldIds = listOf("parentId", "name", "unmanaged"),
-            behaviours = mapOf("name" to listOf(UiBehaviour(UiBehaviourType.SLUGIFY, listOf("parentId")))),
-            commands = listOf(UiManifestCommand(operation, "save", "Save", "save")),
-        )),
+        views = mapOf(
+            operation to UiViewDefinition(
+                id = "sample-form", title = "Sample",
+                layout = UiLayout(
+                    UiLayoutType.FORM,
+                    listOf(UiSection("details", "Details", listOf("parentId", "name", "unmanaged")))
+                ),
+                fieldIds = listOf("parentId", "name", "unmanaged"),
+                behaviours = mapOf("name" to listOf(UiBehaviour(UiBehaviourType.SLUGIFY, listOf("parentId")))),
+                commands = listOf(UiManifestCommand(operation, "save", "Save", "save")),
+            )
+        ),
     )
 
     @Test
     fun `write contract permits parent selection only during creation`() {
         for (operation in listOf(UiOperation.CREATE, UiOperation.UPDATE)) {
-            val result = ui.manifests.resolve(definition(operation),
-                UiManifestContext(UiApplication.TOURNAMENT_MANAGER, operation, setOf(operation)))
+            val result = ui.manifests.resolve(
+                definition(operation),
+                UiManifestContext(UiApplication.TOURNAMENT_MANAGER, operation, setOf(operation))
+            )
             assertEquals("sample", result.resource)
             assertEquals(operation == UiOperation.CREATE, result.fields.getValue("parentId").editable)
             assertTrue(result.fields.getValue("name").editable)
@@ -88,8 +100,10 @@ class UiManifestResolverTests {
 
     @Test
     fun `write contract cannot grant writes without user permission`() {
-        val result = ui.manifests.resolve(definition(UiOperation.CREATE),
-            UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.CREATE))
+        val result = ui.manifests.resolve(
+            definition(UiOperation.CREATE),
+            UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.CREATE)
+        )
         assertTrue(result.fields.values.all { !it.editable && it.behaviours.isEmpty() })
         assertTrue(result.commands.isEmpty())
     }

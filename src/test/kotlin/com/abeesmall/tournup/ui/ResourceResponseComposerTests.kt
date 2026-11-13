@@ -5,14 +5,10 @@ import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.ui.UiCollectionResponse
 import com.abeesmall.tournup.dto.ui.UiPagination
 import com.abeesmall.tournup.dto.ui.UiRecordResponse
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.manifest.seasonResourceDefinition
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.support.UiTestSupport
-import com.abeesmall.tournup.ui.UiApplication
-import com.abeesmall.tournup.ui.UiManifestContext
-import com.abeesmall.tournup.ui.UiOperation
-import com.abeesmall.tournup.ui.withLatestAudit
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -28,14 +24,21 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
 class ResourceResponseComposerTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     private val reader = mock(LatestAuditReader::class.java)
     private val item = SeasonData(UUID.randomUUID(), "tournament-BCDF", "2026 S1", "2026-s1", 2026, nanoId = "BCDF")
-    private val manifest = ui.manifests.resolve(seasonResourceDefinition(),
-        UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.READ, title = item.name))
-    private fun viewer(role: String) = UsernamePasswordAuthenticationToken("user", null,
-        listOf(SimpleGrantedAuthority("ROLE_$role")))
+    private val manifest = ui.manifests.resolve(
+        seasonResourceDefinition(),
+        UiManifestContext(UiApplication.TOURNAMENT_MANAGER, UiOperation.READ, title = item.name)
+    )
+
+    private fun viewer(role: String) = UsernamePasswordAuthenticationToken(
+        "user", null,
+        listOf(SimpleGrantedAuthority("ROLE_$role"))
+    )
 
     @Test
     fun `record enrichment preserves data and includes permitted audit metadata`() {

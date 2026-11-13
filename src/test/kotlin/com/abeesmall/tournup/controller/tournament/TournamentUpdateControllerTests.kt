@@ -3,6 +3,7 @@ package com.abeesmall.tournup.controller.tournament
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.dto.tournament.TournamentUpdateRequest
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
@@ -38,7 +39,13 @@ import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
 @WebMvcTest(TournamentController::class)
-@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class)
+@Import(
+    ResourceWebTestConfiguration::class,
+    SecurityConfiguration::class,
+    com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class
+)
 class TournamentUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
@@ -84,7 +91,8 @@ class TournamentUpdateControllerTests(
                     description = request.description,
                     participantType = request.participantType,
                     participationMode = request.participationMode,
-                    handicapMode = request.handicapMode, nanoId = "BCDF"),
+                    handicapMode = request.handicapMode, nanoId = "BCDF"
+                ),
             ),
         )
 

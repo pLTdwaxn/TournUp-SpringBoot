@@ -4,6 +4,7 @@ import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
@@ -37,7 +38,13 @@ import org.springframework.test.web.servlet.post
 import tools.jackson.databind.json.JsonMapper
 
 @WebMvcTest(SeasonController::class)
-@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class)
+@Import(
+    ResourceWebTestConfiguration::class,
+    SecurityConfiguration::class,
+    com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class
+)
 class SeasonCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
@@ -63,7 +70,7 @@ class SeasonCreateControllerTests(
     @ParameterizedTest
     @ValueSource(strings = ["SUPER_ADMIN", "CLUB_MANAGER", "TOURNAMENT_MANAGER"])
     fun `writers receive a prefilled editable reference with the same lookup contract`(role: String) {
-        whenever(service.createForm( tournamentId)).thenReturn(
+        whenever(service.createForm(tournamentId)).thenReturn(
             ResourceRecord(
                 item = SeasonWriteRequest("", "", null, tournamentId),
                 included = mapOf(
@@ -296,7 +303,7 @@ class SeasonCreateControllerTests(
 
     @Test
     fun `unknown tournament returns not found for all creation endpoints`() {
-        whenever(service.createForm( tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
+        whenever(service.createForm(tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
         whenever(service.namingContext(tournamentId)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
         whenever(service.create(request)).thenThrow(SeasonTournamentNotFoundException(tournamentId))
 
@@ -318,8 +325,8 @@ class SeasonCreateControllerTests(
 
     @Test
     fun `form can be requested without selecting a tournament`() {
-        whenever(service.createForm( null)).thenReturn(
-            ResourceRecord( item = SeasonWriteRequest("", "", null, null)),
+        whenever(service.createForm(null)).thenReturn(
+            ResourceRecord(item = SeasonWriteRequest("", "", null, null)),
         )
 
         mockMvc.get(formUrl) {

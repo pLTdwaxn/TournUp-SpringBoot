@@ -2,7 +2,7 @@ package com.abeesmall.tournup.manifest.season
 
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.dto.ui.UiRecordResponse
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.manifest.seasonResourceDefinition
 import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiManifestContext
@@ -15,21 +15,27 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import tools.jackson.databind.json.JsonMapper
 
 class SeasonCreateManifestTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     private val mapper = JsonMapper.builder().build()
     private val application = UiApplication.TOURNAMENT_MANAGER
 
     @Test
     fun `form defines an editable required reference before its dependent fields`() {
-        val json = mapper.readTree(mapper.writeValueAsString(ui.manifests.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                application,
-                UiOperation.CREATE,
-                allowedWrites = setOf(UiOperation.CREATE),
-            ),
-        )))
+        val json = mapper.readTree(
+            mapper.writeValueAsString(
+                ui.manifests.resolve(
+                    seasonResourceDefinition(),
+                    UiManifestContext(
+                        application,
+                        UiOperation.CREATE,
+                        allowedWrites = setOf(UiOperation.CREATE),
+                    ),
+                )
+            )
+        )
         assertEquals("tournament-manager", json.path("application").stringValue())
         assertEquals("create", json.path("operation").stringValue())
         assertEquals(
@@ -59,14 +65,18 @@ class SeasonCreateManifestTests {
 
     @Test
     fun `behaviours declare reference and year dependencies without the old sourceField contract`() {
-        val json = mapper.readTree(mapper.writeValueAsString(ui.manifests.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                application,
-                UiOperation.CREATE,
-                allowedWrites = setOf(UiOperation.CREATE),
-            ),
-        )))
+        val json = mapper.readTree(
+            mapper.writeValueAsString(
+                ui.manifests.resolve(
+                    seasonResourceDefinition(),
+                    UiManifestContext(
+                        application,
+                        UiOperation.CREATE,
+                        allowedWrites = setOf(UiOperation.CREATE),
+                    ),
+                )
+            )
+        )
         val fields = json.path("fields")
         val name = fields.path("name").path("behaviours").path(0)
         val slug = fields.path("slug").path("behaviours").path(0)
@@ -85,14 +95,16 @@ class SeasonCreateManifestTests {
     @Test
     fun `prefilled values and included reference records leave the field definition unchanged`() {
         val id = "parent-BCDF"
-        val empty = UiRecordResponse(ui.manifests.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                application,
-                UiOperation.CREATE,
-                allowedWrites = setOf(UiOperation.CREATE),
-            ),
-        ), item = SeasonWriteRequest("", "", null, null))
+        val empty = UiRecordResponse(
+            ui.manifests.resolve(
+                seasonResourceDefinition(),
+                UiManifestContext(
+                    application,
+                    UiOperation.CREATE,
+                    allowedWrites = setOf(UiOperation.CREATE),
+                ),
+            ), item = SeasonWriteRequest("", "", null, null)
+        )
         val selected = empty.copy(
             item = SeasonWriteRequest("", "", null, id),
             included = mapOf("tournament" to listOf(mapOf("id" to id, "name" to "Winter Open"))),

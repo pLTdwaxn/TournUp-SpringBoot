@@ -1,6 +1,7 @@
 package com.abeesmall.tournup.controller.season
 
 import com.abeesmall.tournup.dto.audit.LastAuditData
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
@@ -36,7 +37,14 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 
 @WebMvcTest(SeasonController::class)
-@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class, SeasonService::class)
+@Import(
+    ResourceWebTestConfiguration::class,
+    SecurityConfiguration::class,
+    com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    SeasonService::class
+)
 class SeasonListControllerTests(
     @Autowired private val mockMvc: MockMvc,
 ) {
@@ -180,7 +188,10 @@ class SeasonListControllerTests(
             if (canCreate) {
                 jsonPath("$.manifest.commands[0].id", equalTo("create"))
                 jsonPath("$.manifest.commands[0].method", equalTo("GET"))
-                jsonPath("$.manifest.commands[0].href", equalTo("/api/seasons/create/?tournamentId=${tournament.locator}"))
+                jsonPath(
+                    "$.manifest.commands[0].href",
+                    equalTo("/api/seasons/create/?tournamentId=${tournament.locator}")
+                )
             }
         }
     }

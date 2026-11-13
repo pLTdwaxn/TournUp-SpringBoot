@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.manifest.season
 
-import com.abeesmall.tournup.manifest.season.seasonResourceDefinition
+import com.abeesmall.tournup.manifest.seasonResourceDefinition
 import com.abeesmall.tournup.support.UiTestSupport
 import com.abeesmall.tournup.ui.UiApplication
 import com.abeesmall.tournup.ui.UiManifestContext
@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class SeasonFieldCatalogueTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     private val create = ui.manifests.resolve(
         seasonResourceDefinition(),
@@ -44,7 +46,7 @@ class SeasonFieldCatalogueTests {
 
     @Test
     fun `resource and operation manifests agree on shared field metadata`() {
-        val registered = ui.manifests.fields(com.abeesmall.tournup.manifest.season.seasonResourceDefinition())
+        val registered = ui.manifests.fields(seasonResourceDefinition())
             .mapValues { (_, field) -> field.toUiField(UiWidget.DISPLAY) }
         for ((id, definition) in ui.manifests.fields(seasonResourceDefinition())) {
             for (fields in listOf(create.fields, edit.fields, detail.fields, registered)) {
@@ -71,21 +73,25 @@ class SeasonFieldCatalogueTests {
         assertTrue(edit.fields.values.all { it.behaviours.isEmpty() })
         assertTrue(detail.fields.values.all { !it.editable && it.widget == UiWidget.DISPLAY })
         assertTrue(detail.fields.values.all { it.behaviours.isEmpty() })
-        assertEquals(listOf("name"), ui.manifests.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                UiApplication.TOURNAMENT_MANAGER,
-                UiOperation.LIST,
-                allowedWrites = if (false) setOf(UiOperation.CREATE) else emptySet(),
-            ),
-        ).layout.columns)
-        assertEquals(setOf("fromYear", "name", "slug"), ui.manifests.resolve(
-            seasonResourceDefinition(),
-            UiManifestContext(
-                UiApplication.TOURNAMENT_MANAGER,
-                UiOperation.LIST,
-                allowedWrites = if (false) setOf(UiOperation.CREATE) else emptySet(),
-            ),
-        ).fields.keys)
+        assertEquals(
+            listOf("name"), ui.manifests.resolve(
+                seasonResourceDefinition(),
+                UiManifestContext(
+                    UiApplication.TOURNAMENT_MANAGER,
+                    UiOperation.LIST,
+                    allowedWrites = if (false) setOf(UiOperation.CREATE) else emptySet(),
+                ),
+            ).layout.columns
+        )
+        assertEquals(
+            setOf("fromYear", "name", "slug"), ui.manifests.resolve(
+                seasonResourceDefinition(),
+                UiManifestContext(
+                    UiApplication.TOURNAMENT_MANAGER,
+                    UiOperation.LIST,
+                    allowedWrites = if (false) setOf(UiOperation.CREATE) else emptySet(),
+                ),
+            ).fields.keys
+        )
     }
 }

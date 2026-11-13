@@ -2,6 +2,7 @@ package com.abeesmall.tournup.controller.season
 
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
@@ -11,7 +12,6 @@ import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
 import org.hamcrest.Matchers.contains
@@ -39,7 +39,14 @@ import org.springframework.test.web.servlet.put
 import tools.jackson.databind.json.JsonMapper
 
 @WebMvcTest(SeasonController::class)
-@Import(ResourceWebTestConfiguration::class, SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class, SeasonService::class)
+@Import(
+    ResourceWebTestConfiguration::class,
+    SecurityConfiguration::class,
+    com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    SeasonService::class
+)
 class SeasonUpdateControllerTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val mapper: JsonMapper,
@@ -57,8 +64,11 @@ class SeasonUpdateControllerTests(
     private val existing = Season(
         tournament = tournament, name = "2026 S1", slug = "2026-s1", fromYear = 2026,
     )
+
     @org.junit.jupiter.api.BeforeEach
-    fun parentLookup() { whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament) }
+    fun parentLookup() {
+        whenever(tournaments.findByNanoId(tournament.nanoId)).thenReturn(tournament)
+    }
 
     private val request = SeasonWriteRequest("Summer league", "summer-league", 2027, tournament.locator)
     private val shallowUrl = "/api/seasons/${existing.locator}/"

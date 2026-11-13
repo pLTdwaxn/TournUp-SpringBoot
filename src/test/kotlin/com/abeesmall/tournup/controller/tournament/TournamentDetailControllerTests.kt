@@ -1,6 +1,5 @@
 package com.abeesmall.tournup.controller.tournament
 
-import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
@@ -9,7 +8,7 @@ import com.abeesmall.tournup.service.tournament.TournamentService
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
-import com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration
 import java.time.Instant
 import java.util.UUID
@@ -29,11 +28,15 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(TournamentController::class)
-@Import(SecurityConfiguration::class, ResourceWebTestConfiguration::class, TournamentService::class,
-    UiResourceRegistry::class, SeasonManifestConfiguration::class, TournamentManifestConfiguration::class)
+@Import(
+    SecurityConfiguration::class, ResourceWebTestConfiguration::class, TournamentService::class,
+    UiResourceRegistry::class, SeasonManifestConfiguration::class, TournamentManifestConfiguration::class
+)
 class TournamentDetailControllerTests(@Autowired private val mvc: MockMvc) {
-    @MockitoBean private lateinit var records: TournamentRepository
-    @MockitoBean private lateinit var audits: LatestAuditReader
+    @MockitoBean
+    private lateinit var records: TournamentRepository
+    @MockitoBean
+    private lateinit var audits: LatestAuditReader
 
     private val record = Tournament(slug = "winter-open", name = "Winter Open")
 
@@ -89,7 +92,8 @@ class TournamentDetailControllerTests(@Autowired private val mvc: MockMvc) {
     fun `audit enrichment uses the hidden UUID rather than the public locator`() {
         whenever(records.findByNanoId(record.nanoId)).thenReturn(record)
         whenever(audits.findLatest(Tournament::class.java, listOf(record.id))).thenReturn(
-            mapOf(record.id to LastAuditData(42, Instant.parse("2026-11-12T00:00:00Z"), UUID.randomUUID())))
+            mapOf(record.id to LastAuditData(42, Instant.parse("2026-11-12T00:00:00Z"), UUID.randomUUID()))
+        )
         mvc.get("/api/tournaments/${record.locator}/") { with(user("admin").roles("SUPER_ADMIN")) }.andExpect {
             status { isOk() }
             jsonPath("$.item.lastAudit.revision", equalTo(42))

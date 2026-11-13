@@ -4,6 +4,7 @@ import com.abeesmall.tournup.controller.season.SeasonController
 import com.abeesmall.tournup.controller.tournament.TournamentController
 import com.abeesmall.tournup.dto.ui.LookupItem
 import com.abeesmall.tournup.dto.ui.LookupResponse
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
@@ -22,19 +23,41 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(SeasonController::class, TournamentController::class)
-@Import(SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class, ResourceWebTestConfiguration::class,
-    )
+@Import(
+    SecurityConfiguration::class,
+    com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    ResourceWebTestConfiguration::class,
+)
 class ResourceLookupControllerTests(@Autowired private val mvc: MockMvc) {
-    @MockitoBean private lateinit var seasons: SeasonService
-    @MockitoBean private lateinit var tournaments: TournamentService
-    @MockitoBean private lateinit var audits: LatestAuditReader
+    @MockitoBean
+    private lateinit var seasons: SeasonService
+    @MockitoBean
+    private lateinit var tournaments: TournamentService
+    @MockitoBean
+    private lateinit var audits: LatestAuditReader
 
     @Test
     fun `lookup returns lightweight batches without page manifests or audits`() {
         val id = "item-BCDF"
         val parent = "parent-BCDF"
-        whenever(tournaments.lookup("winter", 20, null)).thenReturn(LookupResponse(listOf(LookupItem(id, "Winter Open")), null))
-        whenever(seasons.lookup("2026", 20, null, parent)).thenReturn(LookupResponse(listOf(LookupItem(id, "2026 S1")), "next"))
+        whenever(tournaments.lookup("winter", 20, null)).thenReturn(
+            LookupResponse(
+                listOf(
+                    LookupItem(
+                        id,
+                        "Winter Open"
+                    )
+                ), null
+            )
+        )
+        whenever(seasons.lookup("2026", 20, null, parent)).thenReturn(
+            LookupResponse(
+                listOf(LookupItem(id, "2026 S1")),
+                "next"
+            )
+        )
         mvc.get("/api/tournaments/lookup/?q=winter") {
             with(user("reader").roles("PLAYER"))
         }.andExpect {

@@ -9,7 +9,7 @@ import com.abeesmall.tournup.service.season.SeasonService
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
-import com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration
 import java.time.Instant
 import java.util.UUID
@@ -29,12 +29,17 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(SeasonController::class)
-@Import(SecurityConfiguration::class, ResourceWebTestConfiguration::class, SeasonService::class,
-    UiResourceRegistry::class, SeasonManifestConfiguration::class, TournamentManifestConfiguration::class)
+@Import(
+    SecurityConfiguration::class, ResourceWebTestConfiguration::class, SeasonService::class,
+    UiResourceRegistry::class, SeasonManifestConfiguration::class, TournamentManifestConfiguration::class
+)
 class SeasonDetailControllerTests(@Autowired private val mvc: MockMvc) {
-    @MockitoBean private lateinit var records: SeasonRepository
-    @MockitoBean private lateinit var audits: LatestAuditReader
-    @MockitoBean private lateinit var parents: com.abeesmall.tournup.repository.tournament.TournamentRepository
+    @MockitoBean
+    private lateinit var records: SeasonRepository
+    @MockitoBean
+    private lateinit var audits: LatestAuditReader
+    @MockitoBean
+    private lateinit var parents: com.abeesmall.tournup.repository.tournament.TournamentRepository
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")
     private val record = Season(tournament = tournament, name = "2026 S1", slug = "2026-s1", fromYear = 2026)
 
@@ -93,7 +98,8 @@ class SeasonDetailControllerTests(@Autowired private val mvc: MockMvc) {
     fun `audit enrichment uses the hidden UUID rather than the public locator`() {
         whenever(records.findByNanoId(record.nanoId)).thenReturn(record)
         whenever(audits.findLatest(Season::class.java, listOf(record.id))).thenReturn(
-            mapOf(record.id to LastAuditData(42, Instant.parse("2026-11-12T00:00:00Z"), UUID.randomUUID())))
+            mapOf(record.id to LastAuditData(42, Instant.parse("2026-11-12T00:00:00Z"), UUID.randomUUID()))
+        )
         mvc.get("/api/seasons/${record.locator}/") { with(user("admin").roles("SUPER_ADMIN")) }.andExpect {
             status { isOk() }
             jsonPath("$.item.lastAudit.revision", equalTo(42))

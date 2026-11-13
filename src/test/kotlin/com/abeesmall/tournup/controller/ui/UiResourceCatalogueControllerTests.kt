@@ -1,6 +1,7 @@
 package com.abeesmall.tournup.controller.ui
 
 import com.abeesmall.tournup.auth.AuthenticatedUser
+import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
@@ -34,10 +35,14 @@ import org.springframework.test.web.servlet.get
 
 @WebMvcTest(UiResourceCatalogueController::class)
 @Import(
-    SecurityConfiguration::class, com.abeesmall.tournup.ui.resource.UiResourceRegistry::class, com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    SecurityConfiguration::class,
+    com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
     ResourceWebTestConfiguration::class,
     UiResourceCatalogueService::class,
-    com.abeesmall.tournup.manifest.season.SeasonManifestConfiguration::class, com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    SeasonManifestConfiguration::class,
+    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
 )
 class UiResourceCatalogueControllerTests(
     @Autowired private val mockMvc: MockMvc,
@@ -45,8 +50,10 @@ class UiResourceCatalogueControllerTests(
 ) {
     @MockitoBean
     private lateinit var tournaments: TournamentService
+
     @MockitoBean
     private lateinit var seasons: SeasonService
+
     @MockitoBean
     private lateinit var audits: LatestAuditReader
 
@@ -57,7 +64,8 @@ class UiResourceCatalogueControllerTests(
     @Test
     fun `audit capability requires explicit registration and user permission`() {
         for (audited in listOf(false, true)) {
-            val registration = com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition().copy(audited = audited)
+            val registration =
+                com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition().copy(audited = audited)
             val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration)), manifests)
             for (role in listOf("PLAYER", "SUPER_ADMIN")) {
                 val authentication = viewer(role)
@@ -157,7 +165,17 @@ class UiResourceCatalogueControllerTests(
             jsonPath("$.resources[1].canReadLastAudit", equalTo(true))
             jsonPath(
                 "$.resources[0].operations[*].id",
-                contains("list", "list-in-tournament", "read", "create-form", "create", "edit-form", "update", "naming-context", "lookup"),
+                contains(
+                    "list",
+                    "list-in-tournament",
+                    "read",
+                    "create-form",
+                    "create",
+                    "edit-form",
+                    "update",
+                    "naming-context",
+                    "lookup"
+                ),
             )
             jsonPath("$.resources[0].operations[3].href", equalTo("/api/seasons/create/"))
             jsonPath("$.resources[0].operations[3].requiredContext.length()", equalTo(0))
