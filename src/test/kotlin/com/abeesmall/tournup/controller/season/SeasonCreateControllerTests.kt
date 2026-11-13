@@ -5,6 +5,7 @@ import com.abeesmall.tournup.dto.season.SeasonData
 import com.abeesmall.tournup.dto.season.SeasonNamingContext
 import com.abeesmall.tournup.dto.season.SeasonWriteRequest
 import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.TournamentManifestConfiguration
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
@@ -43,7 +44,7 @@ import tools.jackson.databind.json.JsonMapper
     SecurityConfiguration::class,
     com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
     SeasonManifestConfiguration::class,
-    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class
+    TournamentManifestConfiguration::class
 )
 class SeasonCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,

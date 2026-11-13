@@ -4,6 +4,7 @@ import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.dto.tournament.TournamentCreateRequest
 import com.abeesmall.tournup.dto.tournament.TournamentData
 import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.TournamentManifestConfiguration
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
@@ -47,7 +48,7 @@ import tools.jackson.databind.json.JsonMapper
     SecurityConfiguration::class,
     com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
     SeasonManifestConfiguration::class,
-    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class
+    TournamentManifestConfiguration::class
 )
 class TournamentCreateControllerTests(
     @Autowired private val mockMvc: MockMvc,

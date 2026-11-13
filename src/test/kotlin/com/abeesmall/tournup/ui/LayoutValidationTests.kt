@@ -1,13 +1,15 @@
 package com.abeesmall.tournup.ui
 
-import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.manifest.tournamentResourceDefinition
 import com.abeesmall.tournup.support.UiTestSupport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class LayoutValidationTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     @Test
     fun `reference form fields require a record select widget`() {

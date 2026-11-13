@@ -10,7 +10,7 @@ import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.support.ResourceWebTestConfiguration
 import com.abeesmall.tournup.ui.resource.UiResourceRegistry
 import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
-import com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration
+import com.abeesmall.tournup.manifest.TournamentManifestConfiguration
 import java.time.Instant
 import java.util.UUID
 import org.hamcrest.Matchers.equalTo
@@ -36,8 +36,10 @@ import org.springframework.test.web.servlet.get
 class SeasonDetailControllerTests(@Autowired private val mvc: MockMvc) {
     @MockitoBean
     private lateinit var records: SeasonRepository
+
     @MockitoBean
     private lateinit var audits: LatestAuditReader
+
     @MockitoBean
     private lateinit var parents: com.abeesmall.tournup.repository.tournament.TournamentRepository
     private val tournament = Tournament(slug = "winter-open", name = "Winter Open")

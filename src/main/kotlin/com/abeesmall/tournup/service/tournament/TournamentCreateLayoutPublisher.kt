@@ -1,6 +1,6 @@
 package com.abeesmall.tournup.service.tournament
 
-import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.manifest.tournamentResourceDefinition
 import com.abeesmall.tournup.ui.LayoutValidationReport
 import com.abeesmall.tournup.ui.UiLayoutRepository
 import com.abeesmall.tournup.ui.UiLayoutRevisionId

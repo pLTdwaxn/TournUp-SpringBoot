@@ -7,7 +7,7 @@ import com.abeesmall.tournup.dto.ui.LookupResponse
 import com.abeesmall.tournup.dto.ui.UiCollectionResponse
 import com.abeesmall.tournup.dto.ui.UiRecordResponse
 import com.abeesmall.tournup.dto.tournament.tournamentCreateContract
-import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.manifest.tournamentResourceDefinition
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.security.ResourceAccess
 import com.abeesmall.tournup.service.CrudDelegate
@@ -66,8 +66,10 @@ class TournamentController(private val service: TournamentService, responses: Re
 
     @GetMapping("/api/tournaments/{identifier}/")
     @ResourceAccess(ResourceAction.READ, "tournaments")
-    fun detail(@PathVariable identifier: String,
-               authentication: Authentication): UiRecordResponse<TournamentData> =
+    fun detail(
+        @PathVariable identifier: String,
+        authentication: Authentication
+    ): UiRecordResponse<TournamentData> =
         crud.find(identifier, ResourceRequest(authentication))
 
     @GetMapping("/api/tournaments/create/")
@@ -81,20 +83,26 @@ class TournamentController(private val service: TournamentService, responses: Re
 
     @GetMapping("/api/tournaments/{id}/edit/")
     @ResourceAccess(ResourceAction.UPDATE_FORM, "tournaments")
-    fun editForm(@ResourceLocator @PathVariable id: String,
-                 authentication: Authentication): UiRecordResponse<TournamentUpdateRequest> =
+    fun editForm(
+        @ResourceLocator @PathVariable id: String,
+        authentication: Authentication
+    ): UiRecordResponse<TournamentUpdateRequest> =
         crud.editForm(id, ResourceRequest(authentication))
 
     @PostMapping("/api/tournaments/")
     @ResourceAccess(ResourceAction.CREATE, "tournaments")
-    fun create(@Valid @RequestBody body: TournamentCreateRequest,
-               authentication: Authentication): ResponseEntity<UiRecordResponse<TournamentData>> =
+    fun create(
+        @Valid @RequestBody body: TournamentCreateRequest,
+        authentication: Authentication
+    ): ResponseEntity<UiRecordResponse<TournamentData>> =
         crud.create(body, ResourceRequest(authentication))
 
     @PutMapping("/api/tournaments/{id}/")
     @ResourceAccess(ResourceAction.UPDATE, "tournaments")
-    fun update(@ResourceLocator @PathVariable id: String, @Valid @RequestBody body: TournamentUpdateRequest,
-               authentication: Authentication): UiRecordResponse<TournamentData> =
+    fun update(
+        @ResourceLocator @PathVariable id: String, @Valid @RequestBody body: TournamentUpdateRequest,
+        authentication: Authentication
+    ): UiRecordResponse<TournamentData> =
         crud.update(id, body, ResourceRequest(authentication))
 
     @GetMapping("/api/tournaments/lookup/")

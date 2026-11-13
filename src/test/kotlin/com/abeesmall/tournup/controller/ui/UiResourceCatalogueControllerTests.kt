@@ -2,6 +2,8 @@ package com.abeesmall.tournup.controller.ui
 
 import com.abeesmall.tournup.auth.AuthenticatedUser
 import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.TournamentManifestConfiguration
+import com.abeesmall.tournup.manifest.tournamentResourceDefinition
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
@@ -38,11 +40,11 @@ import org.springframework.test.web.servlet.get
     SecurityConfiguration::class,
     com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
     SeasonManifestConfiguration::class,
-    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    TournamentManifestConfiguration::class,
     ResourceWebTestConfiguration::class,
     UiResourceCatalogueService::class,
     SeasonManifestConfiguration::class,
-    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    TournamentManifestConfiguration::class,
 )
 class UiResourceCatalogueControllerTests(
     @Autowired private val mockMvc: MockMvc,
@@ -65,7 +67,7 @@ class UiResourceCatalogueControllerTests(
     fun `audit capability requires explicit registration and user permission`() {
         for (audited in listOf(false, true)) {
             val registration =
-                com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition().copy(audited = audited)
+                tournamentResourceDefinition().copy(audited = audited)
             val service = UiResourceCatalogueService(UiResourceRegistry(listOf(registration)), manifests)
             for (role in listOf("PLAYER", "SUPER_ADMIN")) {
                 val authentication = viewer(role)

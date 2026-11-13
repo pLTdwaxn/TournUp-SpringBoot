@@ -2,6 +2,7 @@ package com.abeesmall.tournup.controller.season
 
 import com.abeesmall.tournup.dto.audit.LastAuditData
 import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.TournamentManifestConfiguration
 import com.abeesmall.tournup.model.season.Season
 import com.abeesmall.tournup.model.tournament.Tournament
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
@@ -42,7 +43,7 @@ import org.springframework.test.web.servlet.post
     SecurityConfiguration::class,
     com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
     SeasonManifestConfiguration::class,
-    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    TournamentManifestConfiguration::class,
     SeasonService::class
 )
 class SeasonListControllerTests(

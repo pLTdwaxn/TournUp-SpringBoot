@@ -5,6 +5,7 @@ import com.abeesmall.tournup.controller.tournament.TournamentController
 import com.abeesmall.tournup.dto.ui.LookupItem
 import com.abeesmall.tournup.dto.ui.LookupResponse
 import com.abeesmall.tournup.manifest.SeasonManifestConfiguration
+import com.abeesmall.tournup.manifest.TournamentManifestConfiguration
 import com.abeesmall.tournup.repository.audit.LatestAuditReader
 import com.abeesmall.tournup.security.SecurityConfiguration
 import com.abeesmall.tournup.service.season.SeasonService
@@ -27,14 +28,16 @@ import org.springframework.test.web.servlet.get
     SecurityConfiguration::class,
     com.abeesmall.tournup.ui.resource.UiResourceRegistry::class,
     SeasonManifestConfiguration::class,
-    com.abeesmall.tournup.manifest.tournament.TournamentManifestConfiguration::class,
+    TournamentManifestConfiguration::class,
     ResourceWebTestConfiguration::class,
 )
 class ResourceLookupControllerTests(@Autowired private val mvc: MockMvc) {
     @MockitoBean
     private lateinit var seasons: SeasonService
+
     @MockitoBean
     private lateinit var tournaments: TournamentService
+
     @MockitoBean
     private lateinit var audits: LatestAuditReader
 

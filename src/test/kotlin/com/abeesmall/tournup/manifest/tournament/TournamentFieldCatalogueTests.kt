@@ -1,5 +1,6 @@
 package com.abeesmall.tournup.manifest.tournament
 
+import com.abeesmall.tournup.manifest.tournamentResourceDefinition
 import com.abeesmall.tournup.model.tournament.HandicapMode
 import com.abeesmall.tournup.model.tournament.ParticipantType
 import com.abeesmall.tournup.model.tournament.ParticipationMode
@@ -12,7 +13,9 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class TournamentFieldCatalogueTests {
-    @RegisterExtension @JvmField val ui = UiTestSupport()
+    @RegisterExtension
+    @JvmField
+    val ui = UiTestSupport()
 
     @Test
     fun `UI choices and validation values cover the same enum entries`() {

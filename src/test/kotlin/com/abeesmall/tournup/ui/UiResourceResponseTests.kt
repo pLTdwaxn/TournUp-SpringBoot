@@ -4,7 +4,7 @@ import com.abeesmall.tournup.dto.ui.UiCollectionResponse
 import com.abeesmall.tournup.dto.ui.UiPagination
 import com.abeesmall.tournup.dto.ui.UiRecordResponse
 import com.abeesmall.tournup.manifest.seasonResourceDefinition
-import com.abeesmall.tournup.manifest.tournament.tournamentResourceDefinition
+import com.abeesmall.tournup.manifest.tournamentResourceDefinition
 import com.abeesmall.tournup.support.UiTestSupport
 import java.nio.file.Files
 import java.nio.file.Path
